@@ -1,0 +1,106 @@
+RIASSUNTO PROGETTO NINJATRADER - TRAPPED ORDERS PATTERN
+
+OBIETTIVO DEL PROGETTO
+======================
+Sviluppare un indicatore NinjaTrader per il riconoscimento di pattern TRAPPED ORDERS 
+utilizzando dati order flow (MBO/Level 2) da feed Rithmic su range bar.
+
+LAVORO COMPLETATO
+=================
+
+1. COSTRUZIONE INFRASTRUTTURA DATI
+----------------------------------
+- File: data/raw/ES 06-25.Last.txt (File dati tick-by-tick originali)
+- File: data/raw/range_candles.csv (Range bar a 8 tick con delta e volume per livello di prezzo)
+- Logica range bar fedele a NinjaTrader (phantom bars, chiusura precisa)
+
+2. DEFINIZIONE PATTERN TRAPPED ORDERS
+-------------------------------------
+- Pattern tecnico: Inversione rapida nella stessa candela
+- Due varianti: DIVERGENCE (prezzo vs delta opposti) e CONFIRMATION (prezzo e delta allineati)
+- Contesto strutturale: Pattern cercati in punti specifici della market structure
+
+3. APPROCCIO SCIENTIFICO
+-----------------------
+- Analisi quantitativa: Parametrizzazione basata su performance reali
+- Contesto strutturale: Pattern rilevanti solo in zone HH_END, LL_END, HL_PULLBACK, LH_PULLBACK
+- Separazione logica: Contesto (dove cercare) vs Quantitativo (cosa cercare)
+
+FILE CORRENTI DEL PROGETTO
+===========================
+
+STRUTTURA DIRECTORY
+-------------------
+progetto ninjatrader/
+├── data/
+│   ├── raw/
+│   │   ├── ES 06-25.Last.txt          (Dati tick originali)
+│   │   └── range_candles.csv          (Range bar elaborate)
+│   └── results/                       (Output analisi - da creare)
+├── scripts/
+│   └── ricerca_parametri_trapped_orders.py  (Script analisi principale)
+├── docs/
+│   └── patternOrderFlow.txt           (Documentazione pattern)
+└── notebooks/                         (Per analisi future)
+
+FILE CHIAVE PER QUESTA FASE
+---------------------------
+
+scripts/ricerca_parametri_trapped_orders.py
+FUNZIONI PRINCIPALI:
+- identify_structure_zones(): Identifica HH, LL, HL, LH nella market structure
+- find_trapped_orders_in_zones(): Cerca pattern solo nelle zone strutturali rilevanti
+- measure_effectiveness(): Misura performance dei pattern (1, 3, 5, 10 barre forward)
+- generate_parameter_optimization_report(): Genera report con parametri ottimali
+
+data/raw/range_candles.csv
+COLONNE CHIAVE:
+- open, high, low, close: OHLC della range bar
+- delta_open, delta_high, delta_low, delta_close: Delta cumulative
+- price_stats: Volume e delta per ogni livello di prezzo
+- volume, direction: Metriche aggregate
+
+PROCESSO ATTUALE
+================
+
+FASE 1: RICERCA PARAMETRI (In corso)
+------------------------------------
+1. Identificazione contesto: Trova zone HH_END, LL_END, HL_PULLBACK, LH_PULLBACK
+2. Pattern detection: Cerca trapped orders solo in quelle zone
+3. Misurazione performance: Calcola efficacia (success rate, punti medi)
+4. Ottimizzazione: Determina parametri numerici ottimali
+
+FASE 2: SVILUPPO INDICATORE (Prossimo)
+--------------------------------------
+- Traduzione parametri ottimali in NinjaScript
+- Plot automatico quando condizioni soddisfatte
+- Implementazione real-time senza analisi di contesto
+
+OUTPUT ATTESO DALLA FASE CORRENTE
+==================================
+
+FILE RESULTS:
+- trapped_orders_structural_zones.csv: Pattern identificati con caratteristiche
+- effectiveness_by_zones.csv: Performance per ogni pattern
+
+PARAMETRI FINALI:
+TRAPPED ORDERS Ottimizzati:
+- Range minimo: X.XX punti
+- Delta swing minimo: XXX contratti  
+- Volume minimo: XXX contratti
+- Wick ratio minimo: X.XX
+- Extreme volume %: XX%
+- Success rate atteso: XX%
+
+PREPARAZIONE REPOSITORY GIT
+============================
+
+FILE DA INCLUDERE:
+- scripts/ricerca_parametri_trapped_orders.py
+- data/raw/range_candles.csv 
+- docs/patternOrderFlow.txt
+- README.md (da creare)
+- .gitignore (da creare per escludere file grandi/temporanei)
+
+PROSSIMO STEP: 
+Eseguire l'analisi per ottenere i parametri ottimali, poi committare tutto nel repository.

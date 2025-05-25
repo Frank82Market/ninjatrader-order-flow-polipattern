@@ -1,0 +1,469 @@
+Parametrizzazioni e Codice Open Source per Pattern di Order Flow
+
+Principali Pattern di Order Flow nel Trading
+Di seguito presentiamo i principali pattern di order flow impiegati nell’analisi del mercato (come assorbimento, spoofing, imbalance, iceberg, initiative buying/selling, etc.). Per ciascun pattern forniamo una definizione e descrizione del comportamento di mercato, le metriche quantitative per identificarlo, esempi di implementazione (in particolare su piattaforme come NinjaTrader/NinjaScript o simili), eventuale codice open-source, riferimenti accademici disponibili e discussioni su forum specialistici.
+Assorbimento (Absorption)
+Definizione e comportamento: L’assorbimento si verifica quando ordini passivi molto grandi (tipicamente di trader istituzionali) assorbono aggressivi ordini di mercato senza permettere al prezzo di oltrepassare un certo livello
+atas.net
+tradingview.com
+. In pratica, un’enorme quantità di vendite o acquisti viene “assorbita” da altrettanto grandi ordini limite sul lato opposto, impedendo al prezzo di proseguire il movimento. Visivamente, sul DOM o sul footprint chart si osservano volumi insolitamente elevati scambiati su un livello di prezzo chiave (supporto/resistenza) senza un corrispondente spostamento significativo del prezzo
+atas.net
+. Ad esempio, assorbimento dei venditori significa che molti contratti venduti a mercato incontrano un grande compratore in denaro che li assorbe, bloccando il ribasso; viceversa per l’assorbimento dei compratori (grande venditore in lettera che ferma il rialzo)
+atas.net
+. Spesso l’assorbimento segnala l’ingresso di operatori forti che “difendono” un livello di prezzo, potenzialmente anticipando un’inversione o un rimbalzo
+atas.net
+. Parametri quantitativi per l’identificazione: Diversi approcci quantitativi aiutano a individuare l’assorbimento:
+Volume estremo a un livello chiave senza movimento di prezzo: ad esempio, volumi molto superiori alla norma vicino ai massimi o minimi di una barra, accompagnati da un arresto del movimento
+atas.net
+. Spesso si cerca un volume multiplo (es. 2-3 volte superiore al normale) concentrato su un singolo prezzo di swing senza breakout
+atas.net
+. Un caso tipico: nel footprint compaiono 2-3 celle contigue con numeri di volume insolitamente alti al bid o ask su un livello di supporto/resistenza, indicando che lì c’è un grande ordine passivo che sta assorbendo gli aggressivi
+atas.net
+.
+Bounce del prezzo dopo aggressioni fallite: un metodo algoritmico è registrare il volume scambiato a un certo prezzo durante un movimento e verificare se il prezzo torna indietro al livello di partenza (rimbalza) dopo aver toccato quel prezzo. Se il prezzo ritraccia completamente nonostante l’elevato volume scambiato, si segna un evento di assorbimento (segno che quel volume è stato assorbito con successo)
+tradingview.com
+. Spesso si impongono soglie di volume minimo per convalidare l’assorbimento (es. considerare solo assorbimenti con > N contratti scambiati su quel livello) e persino limiti temporali (il rimbalzo deve avvenire entro un certo tempo dall’impatto) per filtrare i casi significativi
+tradingview.com
+.
+Convergenza/divergenza del delta (CVD) rispetto al prezzo: un forte segnale di assorbimento è dato dalla divergenza tra Cumulative Volume Delta e prezzo. Se il delta cumulativo segna un nuovo minimo o massimo estremo, ma il prezzo non fa altrettanto (rimane contenuto), significa che molti ordini a mercato stanno entrando senza riuscire a muovere il prezzo, ossia vengono assorbiti
+tradingriot.com
+. Ad esempio, delta fa un nuovo minimo mentre il prezzo tiene un supporto: i venditori aggressivi sono stati tutti assorbiti dai compratori passivi, e infatti il prezzo non scende oltre
+tradingriot.com
+. Questa situazione di “Delta vs Prezzo” segnala chiaramente l’assorbimento di quegli ordini di mercato da parte di ordini limite opposti
+tradingriot.com
+. In letteratura viene anche chiamata absorption divergence
+tradingriot.com
+.
+Analisi del Times & Sales (tape reading): un criterio semplice è controllare la sequenza degli ultimi trade: ad esempio, X trade consecutivi eseguiti tutti in lettera allo stesso prezzo seguiti dal primo trade in denaro a un prezzo più basso del prezzo di quei trade denota assorbimento dei compratori su quel livello (il mercato ha colpito ripetutamente la lettera ma senza salire oltre, e anzi il successivo trade è a un prezzo inferiore)
+elitetrader.com
+. Viceversa per assorbimento dei venditori (X trade consecutivi al bid sul medesimo prezzo, poi il primo trade successivo in lettera è a prezzo più alto)
+elitetrader.com
+. In pratica, questo algoritmo rileva quando un’ondata di contratti viene eseguita tutta sullo stesso livello di prezzo senza generare un tick di avanzamento, seguita da un’inversione immediata sul tape – chiaro indizio che c’era un iceberg/limite grande che ha assorbito tutta l’ondata.
+Implementazioni e codice: Molte piattaforme offrono strumenti di visualizzazione dell’assorbimento. Ad esempio, NinjaTrader 8 include volumetric bars e nel forum utenti hanno richiesto e condiviso indicatori di Absorption personalizzati
+forum.ninjatrader.com
+. Un indicatore open-source su TradingView (OrderFlow Absorption Indicator di nico-von) implementa la logica descritta: monitora i volumi a un livello e segnala un’assorbimento se il prezzo torna indietro al livello iniziale dopo una mossa, avendo registrato su quel livello un volume almeno pari a una soglia (fissabile manualmente o calcolata come deviazione standard del volume recente)
+tradingview.com
+tradingview.com
+. L’indicatore consente anche di impostare un limite temporale per considerare valida l’absorbing (es. assorbimento “veloce” su ordini improvvisi)
+tradingview.com
+. NinjaTrader, con il modulo Order Flow +, permette di evidenziare l’assorbimento sul footprint (ad es. mostrando barre con delta divergente o marcando livelli di volume elevato non oltrepassati dal prezzo). Alcuni trader usano script personalizzati in C# (NinjaScript) per scansionare il Time & Sales alla ricerca di pattern come quello dei “last X trades at price” menzionato sopra
+elitetrader.com
+. Su forum specializzati si trovano discussioni e codice: un esempio su EliteTrader definisce un “Absorption ShowMe” in EasyLanguage per TradeStation, secondo la logica degli ultimi X trade identici seguiti da un tick opposto
+elitetrader.com
+. Su GitHub sono disponibili repository relativi all’order flow: ad esempio ninjatrader-freeorderflow include vari indicatori volumetrici (come cluster bid/ask, delta, ecc.) che possono essere adattati a individuare l’assorbimento, mentre WaleeTheRobot/OrderFlowBot mostra come automatizzare strategie order flow su NinjaTrader (utilizzando dati volumetrici)
+github.com
+. Fonti accademiche e discussioni: L’assorbimento in senso stretto è meno formalizzato in letteratura, ma è ben noto nei testi di microstruttura: esso riflette il comportamento di liquidity providers che “assorbono” pressione per accumulare posizione. Alcuni lavori accademici sul delta divergente identificano fenomeni assimilabili all’assorbimento (es. delta divergence come segnale di inversione)
+tradingriot.com
+. Tra i trader, l’assorbimento è considerato un elemento chiave: molti thread su futures.io e Reddit lo discutono come strategia di reversal su livelli chiave. Ad esempio, su r/OrderFlow_Trading gli utenti riportano di attendere che il prezzo arrivi a un livello importante e di osservare sul footprint eventuali segni di assorbimento prima di entrare in trade contrari al breakout
+reddit.com
+reddit.com
+. Anche su futures.io viene spesso citato (insieme a exhaustion) nei confronti tra software di order flow
+futures.io
+. In generale, l’assorbimento è un pattern di “supporto nascosto” creato da operatori grandi, e la sua identificazione è ritenuta un vantaggio perché evidenzia dove il mercato può invertire grazie a ordini invisibili all’analisi tecnica tradizionale
+atas.net
+.
+Spoofing (Manipolazione con Ordini Fittizi)
+Definizione e comportamento: Spoofing è una pratica illegale di manipolazione del book, in cui un trader inserisce grandi ordini limitati sul book con l’intenzione di cancellarli prima che vengano eseguiti, allo scopo di ingannare gli altri partecipanti sul reale equilibrio domanda/offerta
+atas.net
+. In sostanza, lo spoofing crea un’illusione di pressione artificiale: ad esempio, posizionare un muro di vendita enorme sopra il prezzo corrente per far credere al mercato che ci sia forte pressione ribassista, inducendo altri a vendere (facendo scendere il prezzo), per poi rimuovere all’ultimo secondo questi ordini fittizi e magari acquistare a prezzo più basso. Lo schema tipico è: aggiunta di ordini enormi da un lato del book (spesso in posizione vicina ma non immediatamente eseguibile), reazione dei partecipanti che vedendo quel volume tendono a muovere il mercato nell’altra direzione, e successiva immediata cancellazione di quei ordini voluminosi non appena il mercato si è mosso come desiderato
+atas.net
+atas.net
+. Il risultato è un breve movimento del prezzo (false breakout o dip) indotto dalla falsa pressione, seguito poi dal ripristino della normalità una volta che gli spoof order spariscono. Spoofing può essere eseguito sia sul lato denaro che lettera e spesso viene automatizzato da algos HFT data la velocità richiesta (inserimento/cancellazione rapida)
+atas.net
+. Parametri per l’identificazione: Rilevare lo spoofing quantitativamente è complesso e oggetto di ricerca, ma vi sono alcuni segnali chiave nel flusso ordini:
+Ordini di grande dimensione aggiunti e rimossi velocemente: uno dei criteri principali è identificare inserimenti di ordini limite insolitamente grandi rispetto al contesto, posizionati tipicamente a pochi tick dal miglior prezzo, seguiti dalla loro cancellazione prima che vengano colpiti. Ad esempio, un ordine di 200 contratti appare improvvisamente in lettera a 1–2 tick dall’ultimo, ma viene cancellato non appena il mercato si avvicina – tale comportamento ripetuto è un forte sospetto di spoofing
+atas.net
+atas.net
+.
+Delta degli ordini nel DOM (aggiunte/cancellazioni): strumenti avanzati monitorano il flusso degli ordini passivi. Piattaforme come ATAS offrono viste speciali del DOM che mostrano variazioni nette (delta) del numero di ordini a ciascun livello. Un pattern di spoofing produce flash di volume: improvvisi incrementi di ordini a un livello seguiti da altrettanto rapide rimozioni. Ad esempio, si possono evidenziare livelli con frequenza di modifiche anomala: se un determinato prezzo vede aggiungere e togliere ordini di grosso volume molte volte in breve tempo rispetto agli altri livelli, potrebbe indicare attività algoritmica manipolativa
+atas.net
+. In ATAS, un template dedicato colora in verde/rosso i livelli dove gli ordini sono stati continuamente aggiunti/tolti, facilitando l’individuazione di questi “livelli sospetti”
+atas.net
+atas.net
+. Una significativa concentrazione di modifiche su un livello, non giustificata da reale esecuzione, è un campanello d’allarme
+atas.net
+.
+Spostamento del prezzo verso l’ordine fantasma: spesso lo spoofing riesce a spingere il prezzo nella direzione opposta all’ordine fittizio. Quindi un altro criterio è: un grande ordine appare sul lato opposto e subito dopo il prezzo inizia a muoversi lontano da esso; l’ordine viene cancellato non appena il mercato raggiunge un certo livello. L’assenza di esecuzione dell’ordine voluminoso (rimasto nel book e poi cancellato interamente) è la conferma che fosse uno spoof: il trader non voleva davvero lo scambio, ha solo bluffato. Pertanto, un algoritmo di rilevazione può cercare ordini di dimensione > soglia X inseriti e poi rimossi completamente senza fill, in correlazione con movimenti di prezzo immediatamente successivi.
+Layering: una variante di spoofing è distribuire più ordini su vari livelli (es. 3-4 livelli in lettera tutti caricati con grossi volumi, come “scalinate” di vendita). Il layering crea un muro multi-livello ancora più convincente. Quantitativamente, questo appare come un cluster di livelli contigui sul DOM con volumi eccezionalmente elevati comparsi insieme. Il ritiro simultaneo di quegli ordini stratificati appena il prezzo si avvicina completa il pattern. Un indicatore potrebbe sommare il volume totale aggiunto su N livelli vicini e segnalarlo se supera un certo multiplo del volume medio locale, poi verificare se quel volume svanisce.
+Implementazioni e codice: A causa della natura manipolativa, lo spoofing è difficile da programmare in semplici indicatori; spesso richiede analisi tick-by-tick del book. Alcune piattaforme propongono soluzioni: ad es. Bookmap ha algoritmi proprietari per identificare spoofing e layering, evidenziando nel heatmap ordini grandi che appaiono e scompaiono velocemente. Nel repository open-source spoof.io
+github.com
+ su GitHub è disponibile un progetto accademico che utilizza reinforcement learning (PPO) per addestrare un agente a riconoscere lo spoofing in tempo reale da dati di livello 3. In tale progetto, vengono estratte feature statistiche dal flusso di ordini (es. variazioni di price e size su finestre temporali) e si allena un algoritmo a segnalare gli schemi anomali propri dello spoofing
+github.com
+. Questo mostra l’approccio moderno con AI per pattern complessi. In NinjaTrader, uno sviluppatore potrebbe sfruttare gli eventi di modifiche del DOM (OnMarketDepth) per contare quante volte un certo livello riceve aggiunte/rimozioni sopra soglie configurate, emettendo magari un alert se > N cambi in M secondi con volume > X (una semplificazione di rilevatore di spoofing). Anche se codice pronto all’uso è raro (data la legalità), esistono discussioni su StackExchange Quant Finance e altri forum su come evitare ordini falsi: ad esempio, suggerendo di utilizzare ordini IOC per non farsi “tirare dentro” da ordini fantasma
+quant.stackexchange.com
+ (cioè eseguire solo se disponibile, altrimenti cancellare) o di analizzare la coda ordini per identificare quelli che scompaiono sistematicamente
+atas.net
+. Fonti accademiche e forum: Lo spoofing essendo vietato è stato oggetto di studi e regolamentazione (la Dodd-Frank Act nel 2010 negli USA lo ha esplicitamente bandito). Accademicamente, viene spesso analizzato come caso di manipolazione del book: Cartea et al. (2023) ad esempio modellano come un market maker algoritmico possa imparare a manipolare il book, definendo lo spoofing come il caso limite in cui l’algoritmo inserisce ordini manipolativi che non intende eseguire
+papers.ssrn.com
+. Studi di detection utilizzano machine learning: es. Wu et al. (2020) propongono modelli di anomaly detection non supervisionati per identificare schemi di ordine anomali compatibili con spoofing
+diva-portal.org
+. Sui forum, i trader riconoscono la presenza di spoofing soprattutto nei mercati elettronici: su futures.io e EliteTrader si trovano discussioni che segnalano certi strumenti o sessioni come “piene di spoofers” e confrontano software (Bookmap, Jigsaw) sulla capacità di evidenziare ordini fantasma. Ad esempio, utenti su futures.io riportano l’utilità di feed MBO (Market-by-Order) del CME per individuare meglio gli spoof: con i dati MBO si può tracciare l’identità degli ordini e capire se grossi ordini vengono continuamente inseriti/cancellati, migliorando l’affidabilità dei detector
+futures.io
+. In sintesi, lo spoofing è un pattern subdolo: il miglior indicatore è l’esperienza nell’osservare il DOM in real-time o l’uso di algoritmi specializzati che analizzano la microstruttura ad alta frequenza.
+Squilibrio Bid/Ask (Imbalance)
+Definizione e comportamento: Nel contesto dell’order flow, per imbalance si intende uno sbilanciamento marcato tra la pressione d’acquisto e di vendita. Il termine viene usato in due accezioni correlate:
+Imbalance nel libro ordini (DOM imbalance): quando il volume di ordini limite sul denaro vs. lettera è sbilanciato (ad esempio molti più contratti in acquisto che in vendita, o viceversa). Un forte squilibrio nel DOM indica asimmetria di liquidità disponibile e può preludere a movimenti (es. se il denaro mostra 3 volte le quantità in lettera, il mercato potrebbe faticare a scendere).
+Imbalance nel footprint (diagonale Bid/Ask Imbalance): un uso più comune nelle strategie intraday: confronta i volumi eseguiti al bid e all’ask su prezzi adiacenti all’interno della stessa barra. Si parla di diagonal imbalance quando, ad un certo livello di prezzo, i contratti scambiati in acquisto (ask) superano di molto quelli scambiati in vendita (bid) sul prezzo immediatamente inferiore, o viceversa. Questo evidenzia uno sbilanciamento aggressivo: moltissimi colpi in ask rispetto a pochi in bid (forte pressione compratrice) o viceversa. Spesso i software di footprint colorano quelle celle quando il rapporto supera una soglia fissa (per convenzione 300-400%). In pratica, se a un dato prezzo si hanno, ad esempio, 500 contratti comprati e sul prezzo subito inferiore solo 100 venduti, il rapporto ~5:1 (500%) configura un buy imbalance significativo.
+Parametri quantitativi: I criteri per segnalare un imbalance vengono parametrizzati così:
+Rapporto minimo bid/ask: L’industry standard è evidenziare un imbalance quando il volume su un lato supera di almeno 3x o 4x quello dell’altro lato
+tradedevils-indicators.com
+. Molti strumenti usano 400% come valore di default (cioè 4 a 1)
+tradedevils-indicators.com
+, ma permettono di impostare a piacere questa soglia. Ad esempio, NinjaTrader Order Flow+ e Sierra Chart usano spesso  imbalance  =  Bid/Ask ≥ 3:1 (300%) come condizione, alcuni estendono a 4:1 (400%). L’impostazione 400% significa che uno dei due lati ha volume quadruplo dell’altro
+tradedevils-indicators.com
+.
+Volume minimo assoluto: per evitare falsi segnali quando i volumi sono bassissimi (es. 1 contro 0 contratti, che matematicamente è infinito%), di solito si impone un minimo. Tipicamente se uno dei due valori è zero o molto piccolo, l’imbalance non viene considerato a meno che l’altro non superi un threshold assoluto. Ad esempio, un indicatore potrebbe richiedere almeno 10 contratti da un lato e 10*4=40 dall’altro per segnalare uno sbilanciamento 400%. Un caso concreto: nell’indicatore Footprint di TradeDevils, la soglia minima di volume predefinita è 1 (quindi ignora disequilibri tipo 5 vs 0) e segnala l’imbalance in rosso (vendite) o blu (acquisti) quando il rapporto ≥ 400% e entrambi i lati hanno almeno 1 contratto
+tradedevils-indicators.com
+.
+Imbalance stacked (empilati): Più significativo di un singolo squilibrio isolato è quando se ne presentano diversi consecutivi sullo stesso lato. Ad esempio, 3 o più livelli consecutivi tutti con buy imbalance indicano che su tre prezzi di fila i compratori erano fortemente più aggressivi dei venditori – questo viene chiamato stacked imbalance rialzista, e viceversa per i ribassisti. Spesso si parametrizza segnalando la barra intera quando ci sono almeno 3 imbalance dello stesso tipo in colonna
+tradedevils-indicators.com
+. Ad esempio, una candela con 3 livelli di fila con sbilanciamento >400% a favore degli acquisti viene bordata di verde (significa pressione di acquisto diffusa su quel range)
+tradedevils-indicators.com
+. La soglia “3” è configurabile (alcuni usano 2, altri 4, ma 3 è comune).
+Imbalance oversized: alcuni definiscono un secondo livello di squilibrio estremo, ad es. soglia al 1000% (10:1). Quando il rapporto bid/ask supera di 10 volte l’altro lato, si può evidenziare in modo speciale (es. testo evidenziato e bordo) per indicare un imbalance eccezionalmente forte
+tradedevils-indicators.com
+.
+Book Imbalance %: Nel DOM, uno strumento comune è calcolare una percentuale di imbalance come: (Volumi_bid - Volumi_ask) / (VolBid + VolAsk). Valori sopra una certa soglia (es. +30% o -30%) indicano netta prevalenza di ordini di acquisto o vendita a riposo
+github.com
+. Alcuni feed forniscono direttamente questo indicatore.
+Implementazioni e codice: Molti software di chart trading supportano l’imbalance nativamente. Sierra Chart, NinjaTrader 8, Quantower, ATAS e altri hanno l’opzione “Footprint/Number Bars Imbalance” in cui l’utente imposta il rapporto e il filtro volume. Ad esempio, in Sierra Chart si può configurare la percentuale (es. 300% o 400%) e la visualizzazione (colori delle cifre nel footprint)
+sierrachart.com
+tradedevils-indicators.com
+. In NinjaTrader, l’addon OrderFlow Volumetric ha setting simili (default 150% su NT8, che può essere alzato). Per NinjaScript open-source, si può consultare il repository ninjatrader-freeorderflow: anche se non esplicitamente chiamato “imbalance”, contiene indicatori per volumetric bars da cui è possibile derivare uno script per colorare livelli con rapporto bid/ask esagerato. Ad esempio, mzFootprint (un indicatore di terze parti) calcola l’imbalance diagonale e lo evidenzia se il volume di vendite su un bid è maggiore di una certa percentuale delle relative buy
+mzpack.pro
+. Il codice PineScript di TradingView offre script educativi: uno script pubblico su TradingView evidenzia i punti di delta imbalance e indica dove volumi aggressivi persistenti suggeriscono accumulazione/distribuzione (concetto simile)
+uctrading.coach
+. Implementare un proprio codice implica iterare su ogni tick o su ogni barra per confrontare i volumi: ad es. per ogni livello di prezzo di una candela, calcolare if (askVol >= k * bidVol) then highlight. Una volta evidenziati graficamente, i trader spesso usano questi squilibri insieme ad altri elementi (come livelli di volume profile) per confermare ingressi. Riferimenti e discussioni: L’imbalance è un concetto ben noto anche in letteratura di microstruttura. La presenza di squilibri nel book viene studiata in relazione all’impatto sul prezzo: ad esempio, alcuni paper mostrano che un forte DOM imbalance può anticipare movimenti (ordine di arrivo degli ordini e disequilibrio determinano pressione futura). In ambito pratico, molti order flow traders considerano i footprint imbalance come segnali operativi. Su forum come futures.io vi sono thread dedicati a “come utilizzare gli imbalance”: c’è chi li impiega per individuare inizi di trend (es. una serie di buy imbalance impilati segna momentum di acquisto), e chi li vede come punti di reazione (es. prezzo che torna a testare zone di imbalance precedenti). Alcune discussioni su EliteTrader notano che un imbalance rialzista per qualcuno può essere letto come assorbimento ribassista per qualcun altro
+futures.io
+ – questo significa che l’interpretazione va fatta nel contesto: se vediamo 3 livelli con forti acquisti ma il prezzo non sale, potrebbe voler dire che un venditore li ha assorbiti (assorbimento), mentre se dopo quegli imbalance il prezzo continua a salire, allora erano veri segnali di forza. I trader professionali quindi osservano dove avvengono gli imbalance (su supporti? in breakout?) e se trovano conferma nel movimento del prezzo. Un utente Reddit ad esempio menziona di usare footprint imbalances su 5 minuti insieme al delta per fare scalp intraday seguendo il momentum
+reddit.com
+. In conclusione, l’imbalance è uno strumento quantitativo per misurare il bias aggressivo del mercato a micro-livello, e i suoi parametri (rapporto e count consecutivi) vengono tarati spesso empiricamente (400% e 3 livelli consecutivi sono standard di molti trader)
+tradedevils-indicators.com
+tradedevils-indicators.com
+.
+Ordini Iceberg (Iceberg Orders)
+Definizione e comportamento: Un ordine iceberg è un ordine di grandissima dimensione che viene nascosto al mercato mostrando solo una piccola parte visibile alla volta. Gli iceberg sono utilizzati da investitori istituzionali per eseguire quantità ingenti senza sconvolgere il prezzo: invece di piazzare, ad esempio, 1000 contratti tutti visibili (che farebbero probabilmente scattare il mercato), ne espongono solo una “punta” (ad es. 50 contratti). Man mano che la punta viene eseguita, l’ordine rivela automaticamente un altro pezzo (altri 50, e così via) finché l’intera quantità nascosta non è completata. Agli altri trader, finché non capiscono la presenza di un iceberg, sembrerà che a quel prezzo ci fossero solo 50 contratti, ma misteriosamente ogni volta che quei 50 vengono comprati, ne ricompaiono altri 50, e così via. Da qui il nome: come un iceberg, solo la parte visibile (tipicamente chiamata display size) è notata nel book, il resto è sommerso e appare gradualmente
+orcabay.io
+orcabay.io
+. Gli iceberg introducono liquidità nascosta: ad un certo livello di prezzo c’è molta più liquidità di quanto il DOM mostri. Il loro comportamento caratteristico: ricarica continua sullo stesso livello. Per esempio, si vede sul nastro che a 100.00 passano 100, 200, 300 contratti venduti ma il livello 100.00 bid non si sposta – segno che c’è un grosso compratore nascosto che continua a comprare tutto a 100 senza mai mostrare più di X alla volta. Quando l’iceberg è esaurito, il livello verrà rotto. Identificazione quantitativa: Riconoscere un iceberg richiede di incrociare le informazioni di book e flusso di esecuzione:
+Volume eseguito vs. dimensione visibile: il metodo principe: se notiamo che su un certo prezzo è stato eseguito un volume molto maggiore di quanto fosse mai visibile nel book, quasi certamente c’era un iceberg. Ad esempio, il book mostrava 50 contratti in vendita a 101.20, ma vediamo sul Times&Sales che a 101.20 sono stati scambiati 300 contratti totali senza che il prezzo andasse oltre – significa che oltre ai 50 visibili, altri ~250 erano nascosti e hanno continuato a rifornire l’offerta
+orcabay.io
+. Questo confronto può essere fatto in tempo reale se si registra il max size visibile offerto su quel livello e si cumula il volume trade: quando il secondo supera il primo di una certa tolleranza, scatta un segnale di iceberg.
+Ricarica immediata allo stesso prezzo: un pattern tipico: il livello di prezzo X mostra una certa quantità (es. 10 contratti). Arrivano 10 contratti market che colpiscono quel livello -> normalmente il livello dovrebbe svuotarsi e il prezzo avanzare, ma invece compare immediatamente un altro lotto allo stesso prezzo (es. ancora 10 contratti in lettera a X appena i precedenti sono stati eseguiti)
+orcabay.io
+. Se questo refresh accade ripetutamente più volte, indica presenza di un iceberg (l’algoritmo dell’iceberg sta mostrando un nuovo slice ogni volta)
+orcabay.io
+. Indicatori DOM avanzati possono evidenziare questi refill: ad esempio Bookmap e Jigsaw offrono colonne che mostrano quanti ordini nuovi compaiono su un livello dopo esecuzioni (iceberg detector).
+Stallo del prezzo nonostante alta attività: se un livello di prezzo “tiene” molto a lungo pur venendo attaccato da grossi volumi, c’è la possibilità di iceberg. In genere, un normale livello di book con 100 contratti, se viene colpito da 300 contratti market, deve cedere; se invece regge, vuol dire che dietro quei 100 ce n’erano molti di più (nascosti). Dunque, un’anomalia tra volume aggressivo e mancato movimento del prezzo può segnalare iceberg (in parte simile all’assorbimento, con la differenza che qui l’ordine passivo è ufficialmente nascosto tramite funzionalità dell’exchange).
+Dati di ordine Level 3 e MBO: alcune borse forniscono feed con dettagli per ordine (MBO: Market by Order). In tali dati, un ordine iceberg può spesso essere identificato perché vedi un singolo OrderID che continua a ridursi e riapparire. Ad esempio il CME contrassegna gli iceberg “native” (gestiti dall’exchange) in modo che ogni refresh ha un new OrderID ma vi sono metodi euristici per collegarli. Questi feed permettono detection algoritmiche molto precise, spesso integrate in piattaforme pro.
+Implementazioni e codice: Alcune piattaforme hanno creato indicatori dedicati agli iceberg. Bookmap ad esempio offre un Iceberg Tracker che sfrutta i dati MBO su CME per contare in tempo reale quanti contratti iceberg vengono rilevati (Bookmap distingue tra native iceberg e synthetic iceberg, quest’ultimi creati spezzando manualmente ordini grandi)
+futures.io
+. Jigsaw ha alert audio per quando avvengono esecuzioni su iceberg (basandosi su refill percepiti). ATAS e SierraChart permettono approcci semi-manuali: in Sierra, alcuni utenti hanno creato colonne DOM personalizzate con ACSIL che calcolano la differenza tra volume eseguito e visibile, segnalando la differenza come “Iceberg size” (c’è ad es. un thread su futures.io dove un utente gemify mostra una DOM column per sniffare iceberg)
+futures.io
+. Dal lato codice open-source, esistono progetti didattici: fushuyue/Ml_HFT su GitHub ad esempio illustra un algoritmo di rilevazione iceberg sul mercato E-Mini S&P; riportano di aver trovato oltre 11.000 ordini iceberg in un singolo giorno di dati CME
+github.com
+ usando criteri quantitativi di confronto volume eseguito/visibile. Inoltre, in ambito ricerca, è pubblicato un metodo di machine learning su dati CME Level 3 che identifica e predice sia iceberg nativi (inseriti come ordini iceberg ufficiali dell’exchange) che sintetici (spezzettati manualmente)
+paperswithcode.com
+. Ciò significa che sono disponibili algoritmi in letteratura (con relativo codice su Papers With Code) per questa detection. Per un approccio più semplice, un trader/programmatore potrebbe implementare un Iceberg Sniffer così: monitorare ogni esecuzione; tenere traccia, per ogni livello di prezzo, di quanti contratti erano presenti prima dell’esecuzione (visibili) e quanti vengono scambiati; se su un livello la somma dei contratti eseguiti in sequenza supera di una soglia il massimo visibile osservato, loggare un iceberg di dimensione stimata = (volume eseguito - visibilità iniziale)
+orcabay.io
+. Questo pseudocodice è stato implementato in vari linguaggi (C++, Python) in progetti di HFT. Ad esempio, l’exchange LSE pubblicò anni fa un esercizio su come costruire un order book con iceberg e come leggerlo (vedi IceBook simulator su GitHub)
+github.com
+. Riferimenti e forum: Gli ordini iceberg sono studiati nei testi di finanza quantitativa da fine anni ‘90, in quanto forma di hidden liquidity. Un noto studio empirico del 2013 (Lee & Radhakrishna) analizzò la diffusione degli iceberg sul NASDAQ. Più recentemente, il tema iceberg è vivace soprattutto nel trading di futures: il CME dal 2019 fornisce il feed MBO che ha permesso a molti retail di “vedere” gli iceberg con apposite tool. Su futures.io e EliteTrader abbondano discussioni: ad esempio, utenti segnalano come Bookmap mostri l’intera storia di un iceberg (dove è apparso, quante volte si è ricaricato, quanti contratti totali ha mangiato)
+futures.io
+, mentre altri preferiscono i suoni di Jigsaw. C’è consenso che identificare un iceberg in anticipo dia un vantaggio: significa notare dove “i giganti” stanno comprando/vendendo in segreto
+bookmap.com
+. Riconoscerlo può permettere di accodarsi al grande player (buy nell’esempio del bid iceberg) sapendo che c’è supporto nascosto fino a che non verrà consumato. Accademicamente, la capacità di rilevare iceberg è considerata preziosa: un paper del 2020 presentato al CME condivide un metodo per individuarli e persino predirne l’esaurimento con ML (indicando che anche i grandi investitori vogliono sapere quando altri iceberg sono attivi nel mercato)
+paperswithcode.com
+.
+Acquisti/Vendite di Iniziativa (Initiative Buying/Selling)
+Definizione e comportamento: Con initiative buying (o selling) si indica un’azione aggressiva e decisa da parte dei compratori (o venditori) che prendono il controllo del mercato spingendo il prezzo fuori dai livelli recenti. In termini semplici, si tratta di ordini a mercato in grande quantità che sollevano l’offerta (nel caso dei compratori) o colpiscono il denaro (nel caso dei venditori) ripetutamente, causando una rottura di range, un breakout o un trend direzionale. È definito “initiative” perché chi lo attua non sta aspettando il prezzo su valori già testati (come farebbe un responsive seller/buyer in reazione), ma inizia un movimento verso nuovi livelli di prezzo, accettando di scambiare a prezzi via via peggiori pur di inseguire il mercato. Questo comportamento spesso si osserva all’uscita da fasi di congestione o all’apertura del mercato: volumi in forte aumento sul lato aggressivo, molti contratti che si eseguono in sequenza e il prezzo che avanza rapidamente in una direzione. Un chiaro segnale di initiative buying è quando si vedono molti trade eseguiti in ask uno sopra l’altro e il prezzo che sale rompendo resistenze – i compratori stanno letteralmente “alzando” il mercato mangiandosi tutta la liquidità disponibile
+bookmap.com
+. Viceversa, initiative selling quando i venditori colpiscono il bid livello dopo livello e il prezzo crolla rompendo supporti. Parametri quantitativi: Diversi elementi misurabili caratterizzano l’iniziativa aggressiva:
+Sequenza di volumi crescenti (Volume sequencing): un pattern da footprint è quando in una candela rialzista vedi, partendo dal minimo, volumi scambiati crescenti ad ogni livello man mano che il prezzo sale. Ciò indica che i buyer non solo stanno comprando, ma aumentano la quantità mano a mano che il prezzo avanza (segno di forte convinzione). Ad esempio, 5 o più livelli consecutivi in una candela con volumi in ask via via maggiori è un classico segnale di acquisto aggressivo sostenuto
+tradedevils-indicators.com
+. Un indicatore potrebbe cercare almeno N livelli con volume crescente sul lato dell’iniziativa (N spesso = 5)
+tradedevils-indicators.com
+. Nell’esempio: 0, 17, 165, 181, 573 contratti su livelli di prezzo consecutivi ascendenti – evidente accumulo aggressivo di acquisti che spingono il mercato su
+tradedevils-indicators.com
+.
+Sweep del book (buchi di volume): un movimento di iniziativa spesso si manifesta come sweep, ossia un’ondata di ordini a mercato che travolge più livelli di book in un istante. Sul footprint, un sweep può lasciare dietro di sé livelli quasi vuoti perché il prezzo “salta” oltre (es. una candela che ha una colonna di volumi tipo 4, 0, 0, 0 su quattro livelli di ask consecutivi indica che i compratori hanno spazzato il book in su senza lasciare contrattazioni sui livelli intermedi)
+tradedevils-indicators.com
+. Questo si vede anche sul DOM come diversi livelli che vengono tolti di colpo. Un criterio algoritmico: se il prezzo avanza di X tick in meno di Y secondi con volumi totali > Z, segnala un possible sweep (iniziativa). Ad esempio, 4 livelli saltati in pochi attimi
+tradedevils-indicators.com
+.
+Delta e CVD in accelerazione: quantitativamente, l’initiative buying produce deltas altamente positivi. Si può monitorare la velocità di crescita del Cumulative Delta: se improvvisamente il delta cumulativo sale a ritmo superiore alla media storica (break di struttura), coincide con i compratori che dominano
+bookmap.com
+. Indicatori come il Delta Rate o Delta per Second possono evidenziare quel momento. Un parametro: delta di una candela > soglia (es. > 2 volte la deviazione standard dei delta recenti) potrebbe suggerire un’ondata aggressiva fuori dall’ordinario.
+Rottura di livelli di mercato profile o VWAP: spesso l’acquisto di iniziativa parte alla rottura di un valore di riferimento (es. oltre la Value Area High di un Market Profile, o sopra il massimo del giorno precedente, etc.). Quindi in strategie quantitative a volte si filtra il segnale di “forte delta positivo” con la condizione che il prezzo stia facendo un breakout di un massimo relativo.
+Persistenza e mancanza di contrattacco opposto: un’altra caratteristica: la mancanza di contratti dall’altro lato. Ad esempio, in un trend con initiative buying, potresti notare che più barre consecutive hanno delta positivo e magari in aumento, senza barre a delta negativo rilevanti in mezzo (nessun pullback significativo). Criterio: 3 barre di fila con delta > 0, e ciascuna con delta maggiore della precedente, indica momentum in aumento (a volte chiamato “delta thrust”). Un segnale di momentum calante è l’opposto (vedi fading momentum più avanti)
+tradedevils-indicators.com
+.
+Implementazioni e codice: Rilevare algorithmicamente l’iniziativa è fattibile e spesso integrato nelle strategie di breakout. Su NinjaTrader, un trader può costruire uno strategy script che ascolta gli order flow events: ad esempio, usando l’indicatore Cumulative Delta, generare un segnale di buy quando il delta cumulativo su un intervallo breve aumenta oltre una soglia contemporaneamente al superamento di un livello chiave. Oppure sfruttare i dati del Level II: un rapido drenaggio degli ordini in lettera su più livelli può essere calcolato. Un utente potrebbe anche utilizzare l’indicatore OrderFlow VWAP e leggere quando il prezzo esce dalle bande di deviazione con delta forte (un segno di iniziativa dei partecipanti). Per evidenziare graficamente, indicatori come quello di TradeDevils mettono un bordo verde attorno alle barre che contengono almeno 3 imbalance stacked sul lato buy – che corrisponde a initiative buying in atto
+tradedevils-indicators.com
+. Un altro esempio: Volume sequencing come discusso può essere codificato facilmente: un loop nei livelli di volume di una candela, contando quante volte volume(i) < volume(i+1) consecutivamente; se >=5 e la direzione della barra è up, segnala acquisto aggressivo (il repository tradedevils-footprint mostra esempi di regole simili)
+tradedevils-indicators.com
+. Non esistono molti “indicatori di iniziativa” nominali, perché spesso questo concetto emerge combinando output di più strumenti (delta, volume per prezzo, speed of tape). Tuttavia, OrderFlow Labs e altri vendor hanno studi specifici: es. un loro indicatore chiamato Big Sweep evidenzia aree di sweep aggressivo (compratori che spingono velocemente)
+orderflowlabs.com
+. In open-source, possiamo riferirci agli esempi di sweep detection nel codice di tradingriot’s footprint guide, dove un semplice algoritmo segna con un colore i livelli con volume=0 all’interno di una candela dopo volumi significativi – segno che c’è stato uno strappo (sweep)
+tradedevils-indicators.com
+. Riferimenti e discussioni: Il concetto di iniziativa vs risposta viene dalla teoria dell’Auction Market: i compratori di iniziativa sono quelli che comprano sopra la Value Area (dove “non dovrebbero” secondo l’equilibrio precedente) perché credono in nuovi prezzi più alti
+quizlet.com
+. Nei corsi avanzati (es. documenti CBOT o glossari come Vtrender) vengono definiti IB/IS (Initiative Buying/Selling) come segnale che il mercato sta accettando nuovi territori
+vtrender.com
+. Nei forum, i trader discutono di riconoscere quando “i big player premono sull’acceleratore”: per esempio, su futures.io alcuni raccontano di seguire il cumulative delta per capire se i breakout sono supportati da veri acquisti di iniziativa o sono falsi (mancano di volume)
+futures.io
+. Un blog di Bookmap riassume: “Initiative Buying/Selling: heavy market orders aggressively lifting the offer or hitting the bid signal strong momentum”
+bookmap.com
+. Questo momentum, se rilevato, può essere sfruttato entrando a favore (follow the trend) oppure per gestire posizioni (non andare contro un mercato dominato da iniziativa). Academicamente, l’iniziativa aggressiva si collega al concetto di momentum ignition studiato nell’HFT: algoritmi che deliberatamente eseguono serie di ordini per innescare movimenti. Alcuni articoli (es. Johnson et al. 2013) parlano di “spoofing vs momentum ignition”, in cui quest’ultimo è proprio spingere attivamente il prezzo in una direzione. Un tratto distintivo misurabile è il trade aggressor imbalance in brevissimo tempo (e.g. >80% degli ultimi N trades sono aggressivi buy – segnale quantitativo di initiative buying). Nei forum, molti condividono screenshot di footprint dove dopo un periodo piatto compaiono diversi imbalance blu impilati e il prezzo decolla: commentano quello come “istituzionali hanno preso il controllo”. In generale dunque, acquisti/vendite di iniziativa sono riconosciuti quando c’è conferma sia nel volume che nel movimento del prezzo: numerosi contratti scambiati e il mercato che rompe livelli – un connubio che piattaforme moderne cercano anche di quantificare con allarmi (es. “High Volume Burst Detected”).
+Esaustione e Stop Runs (Exhaustion & Stop Runs)
+Definizione e comportamento: L’esaustione è il fenomeno opposto all’iniziativa: rappresenta l’indebolimento o il termine della pressione di acquisto o vendita. In altre parole, il mercato “si svuota” di compratori (o venditori) man mano che il prezzo raggiunge un’estensione, segnalando un possibile punto di svolta o almeno una pausa. Un classico segnale di esaustione è quando, dopo un movimento sostenuto, arrivati su un nuovo massimo non ci sono praticamente più contratti che comprano a mercato – il tape si fa sottile, magari vedi solo pochi lotti scambiati proprio all’estremo del range. Sul footprint questo appare come numeri molto piccoli o zero agli estremi superiori/inferiori di una barra di trend
+tradedevils-indicators.com
+tradedevils-indicators.com
+. Ad esempio: candela rialzista che chiude sui massimi ma l’ultima cella in ask al top mostra solo 3 contratti scambiati: significa che quasi nessuno ha comprato a quel nuovo high, segnale che la domanda aggressiva si è esaurita. Spesso l’esaustione di acquisto coincide con venditori che iniziano a entrare e viceversa. Uno stop run invece è un evento improvviso in cui una valanga di ordini viene eseguita perché sono stati attivati stop loss o stop entry (tipicamente cluster di ordini a mercato attivati in simultanea quando il prezzo rompe un livello). Uno stop run produce un picco di volume improvviso e un movimento rapido, ma spesso senza continuazione, perché è alimentato da ordini “forzati” (gli stop) più che da genuino interesse a quei prezzi
+bookmap.com
+bookmap.com
+. Frequentemente dopo uno stop run il mercato invertisce bruscamente, lasciando intrappolati quei trader che avevano gli stop. Pertanto, stop runs ed esaustioni sono correlati: uno stop run rappresenta un ultimo sbuffo di pressione (tanti ordini in pochi secondi) seguito da vuoto di interesse, quindi è esso stesso un segnale di esaustione del movimento (e di trapped traders, trader intrappolati). Parametri quantitativi:
+Volume minimo agli estremi (Exhaustion print): Molti footprint evidenziano un exhaustion print quando il volume all’estremo alto di una candela rialzista (o al minimo di una ribassista) è sotto una soglia. Ad esempio, un criterio diffuso è: meno di 10 contratti scambiati sull’ultimo prezzo della barra → mark come possibile esaustione
+tradedevils-indicators.com
+. Questo numero può essere calibrato all’instrumento; 10 è default su alcuni futures liquidi
+tradedevils-indicators.com
+. Significa che il mercato ha fatto un nuovo high ma con pochissimi partecipanti, segno di debolezza del breakout.
+Mancanza di follow-through dopo un grosso trade: un’altra indicazione è osservare cosa succede immediatamente dopo un grande scambio. Se vedi, ad esempio, un’enorme immissione di acquisti (un market order massiccio) ma il prezzo non riesce a salire oltre quel livello, anzi si blocca, vuol dire che quell’azione aggressiva non ha avuto seguito – i potenziali compratori si sono esauriti su quel colpo
+bookmap.com
+. Quindi uno potrebbe misurare: grosso tick di volume in ask, ma la candela successiva non fa nuovi massimi: segnale di buying exhaustion.
+Divergenza negativa delta-prezzo (mancanza aggressori ai nuovi estremi): come già notato, se il prezzo fa un nuovo massimo ma il delta non segue (non c’è aumento di ordini aggressivi), c’è un’esaustione di compratori
+tradingriot.com
+tradingriot.com
+. Questo è complementare all’assorbimento: “lack of aggressive buyers at new highs”
+tradingriot.com
+. Viceversa per i minimi.
+Stop run signature (volume spike + retrace): quantitativamente un stop run può essere visto come un improvviso spike di volume in un brevissimo periodo, spesso accompagnato da slippage (il prezzo salta diversi tick perché tanti ordini si attivano insieme). Per esempio, 1000 contratti in pochi secondi rompendo un livello, seguiti entro 1-2 minuti da un movimento opposto di entità simile che riporta il prezzo indietro. Un algoritmo potrebbe cercare cluster temporali di altissimo volume e successivamente verificare se il prezzo ritorna entro X% del livello di partenza (segno che erano stop e non nuovo trend). Molti trader usano indicatori di Volume Spike: se appare un volume molto oltre la norma su un’estensione di prezzo e poi la candela chiude contro direzione, è probabile fosse un esaurimento via stop run.
+Imbalance inversi (trapped traders): Un segnale sofisticato di trader intrappolati (connesso a stop run) è la presenza di inverse imbalance. Esempio: candela rossa (down bar) ma nei suoi massimi contiene buy imbalance impilati – significa che molti hanno comprato il breakout verso l’alto, però la candela è finita in ribasso, quindi quei compratori sono ora intrappolati in perdita
+tradedevils-indicators.com
+. Questo pattern quantitativo (più imbalance rialzisti in una barra ribassista, o viceversa) è un forte segnale di inversione: quei trader intrappolati probabilmente dovranno uscire, alimentando il movimento opposto. Parametro tipico: >=2 o 3 imbalance “contrari” nella stessa barra di colore opposto
+tradedevils-indicators.com
+.
+Implementazioni e codice: Gli indicatori di esaustione sono comuni. Ad esempio, TradeDevils Footprint marca con un pallino le exhaustion prints (secondo la soglia configurata, di default 10 contratti)
+tradedevils-indicators.com
+. Molti script in NinjaTrader calcolano semplicemente il volume al high/low di ciascuna barra volumetrica e lo confrontano con la soglia: se minore, segnalano. Anche TradingView ha script didattici: uno pubblicato mostra sul grafico punti di volume exhaustion quando c’è un picco di volume seguito da candele con range piccolo – indice di blow-off. Un aspetto cruciale è combinare l’eshaustion con altri segnali di conferma (es. un delta che cambia segno, l’apparire di ordini passivi dall’altro lato, ecc.). Ad esempio, su NinjaTrader un approccio sistematico è: attendi una candela con exhaustion print + delta in calo + arrivo di un imbalance opposto, allora generi un segnale di inversione. Queste logiche possono essere codificate nelle strategie di automazione. Per gli stop run, alcune piattaforme offrono alert specifici: Bookmap ad esempio ha segnalazioni di Stop & Iceberg Detector, dove grazie ai dati MBO deduce quando un trade è probabilmente uno stop (sfruttando il flag Stop se disponibile, o la modalità di esecuzione). In generale comunque, identificare gli stop run in codice significa catturare climax di volume. Un banale indicatore di climax: volume della barra > 200% della media X barre precedenti e la barra chiude contro direzione → possibile capitolazione (stop run) seguita da inversione. Riferimenti e forum: Il concetto di esaustione è ben noto nei pattern di analisi tecnica tradizionale (es. exhaustion gap, climax top), ma l’order flow lo rende molto concreto col footprint. Sul forum EliteTrader troviamo discussioni su “exhaustion setup” e se sia affidabile: alcuni dicono che usato da solo può essere fallace, ma combinato con assorbimento migliora
+elitetrader.com
+elitetrader.com
+. In pratica, molti suggeriscono: attendere un segnale di esaustione (es. pochi contratti sul nuovo high) insieme ad un segnale di assorbimento opposto (es. compare un grande venditore lì) dà la migliore probabilità di inversione. Futures.io e altri hanno thread in cui utenti condividono screenshot di volume climax in corrispondenza di minimi/massimi significativi, spiegando come riconoscono che “non c’erano più compratori, quindi sono entrato short” ecc. Gli stop run vengono spesso menzionati nei resoconti: ad esempio “ho evitato di comprare quel breakout perché ho visto che era solo uno stop run – grosso volume ma poi niente follow-through”. Anche la terminologia “trap” è comune: trapped traders come risultato di stop run sono discussi sul forum di Jigsaw/Bookmap e video didattici (Axia Futures mostra spesso esempi di stop run sui massimi con successivo crollo). Academicamente, c’è sovrapposizione con studi su liquidity cascades: quando scattano molti stop, si crea un temporaneo vuoto di liquidità che porta a overshoot del prezzo, seguito da reversion. Un paper di 2014 di Gerig parlava di “flash crashes” come serie di stop run a cascata. In sintesi, sui forum professionali si consiglia di non inseguire il prezzo proprio nei momenti di volumi esplosivi ai nuovi estremi, perché spesso quelli segnano la fine (esaustione) più che l’inizio; invece, chi fa contrarian trading cerca esattamente quei segnali per entrare contro-trend con stop corti. Strumenti come l’Relative Volume o l’Volume Delta invertito sono usati per quantificare se un movimento è “finto” (solo stop) o genuino. Ad esempio, Bookmap suggerisce: “Stop runs senza continuazione: prese di liquidità improvvise che non portano progresso ulteriore (inversione quasi immediata)”
+bookmap.com
+ – se vedi ciò, è quasi certamente un segnale di esaurimento e imminente pullback.
+Tabella riassuntiva – Parametri Chiave dei Pattern di Order Flow:
+Pattern	Indicatore Quantitativo Chiave	Soglie tipiche (esempi)
+Assorbimento	Volume eccezionalmente alto su un livello senza movimento di prezzo; Divergenza prezzo-delta (CVD)	Volume livello ≥ 2-3x media senza breakout
+atas.net
+; CVD fa nuovo minimo ma prezzo tiene supporto
+tradingriot.com
+. Numero di trade consecutivi su stesso prezzo (es. ≥5) seguiti da trade contrario a prezzo peggiore
+elitetrader.com
+.
+Spoofing	Aggiunta/rimozione rapida di grossi ordini nel DOM; Frequenti modifiche su livelli specifici; Ordini mai eseguiti che spariscono	∆Ordini su livello >> media (es. +100 poi -100 in <1s); >3 cambi al secondo su stesso livello con size >> normale. Volume mostrato anomalo (es. >5x size media livello) poi cancellato al 100%
+atas.net
+.
+Imbalance	Rapporto volumi aggressivi Bid vs Ask molto sbilanciato (footprint diagonale)	Rapporto Bid/Ask ≥ 400% (4:1) evidenziato
+tradedevils-indicators.com
+; Min volume per lato ≥1-5 contratti per validità
+tradedevils-indicators.com
+. Stacked: ≥3 imbalance consecutivi su stesso lato
+tradedevils-indicators.com
+. Oversized: soglia alta es. 1000% (10:1)
+tradedevils-indicators.com
+.
+Iceberg	Volume eseguito su un prezzo >> quantità visibile; Refill immediato sul livello dopo esecuzioni	Volume traded ≥ (visibile + soglia) → segnale
+orcabay.io
+. Esempio: 300 contratti eseguiti vs 50 visibili. Ripetute ricomparse di X contratti allo stesso prezzo dopo fill di X (pattern di refresh)
+orcabay.io
+.
+Iniziativa (trend)	Sequenza di ordini a mercato multi-livello (sweep); Delta molto positivo/negativo continuativo; Imbalance multipli pro-trend	≥5 livelli consecutivi con volumi crescenti sul footprint (volume sequencing)
+tradedevils-indicators.com
+. Prezzo salta ≥3-4 tick in pochi secondi (sweep) lasciando livelli con 0 volumi
+tradedevils-indicators.com
+. 3+ barre consecutive delta positivo in aumento. 2-3 imbalance impilati nella stessa barra
+tradedevils-indicators.com
+.
+Esaustione	Volume estremamente basso agli estremi di swing; Spike di volume senza follow-through; Delta divergente agli high/low	≤10 contratti scambiati su high/low di barra (exhaustion print)
+tradedevils-indicators.com
+. Candela con volume = 2-3x media ma range piccolo successivo (climax). Prezzo fa high nuovo con delta stagnante o minore
+tradingriot.com
+.
+Stop Run	Improvviso picco di volumi e volatilità, seguito da rapido retracement (trader intrappolati)	Volume in 1-2 min >> normale (es. >5x barra precedente) e successiva inversione ≥50% del movimento. Candela con lunga ombra dopo breakout. Presenza di inverse imbalance (≥2-3) nella barra di inversione (trapped buyers/sellers)
+tradedevils-indicators.com
+.
+
+Note: i valori sono indicativi e da tarare per ogni mercato. Ad es, “10 contratti” per ES può equivalere a “1 contratto” per un titolo azionario illiquido in termini di exhaustion. Le soglie percentuali (400%, 300%) sono standard di molti software footprint
+tradedevils-indicators.com
+. I riferimenti citati mostrano come questi parametri sono discussi in letteratura e nella pratica. Riferimenti Bibliografici e Sitografia:
+ATAS Trading, “Absorption of demand and supply in the footprint chart” – definizione di assorbimento e esempi
+atas.net
+atas.net
+.
+TradeDevils, “Order Flow Footprint indicator for NinjaTrader 8” – documentazione parametri imbalance, exhaustion, sweeps, etc.
+tradedevils-indicators.com
+tradedevils-indicators.com
+.
+Bookmap, “Key Order Flow Strategies” (2025) – descrizione di absorption, initiative buying, exhaustion, stop runs
+bookmap.com
+bookmap.com
+.
+EliteTrader forum – thread “Order Flow indicator to code (TradeStation)”: logica per individuare assorbimento via sequenza di trade
+elitetrader.com
+.
+Tradingriot (Tomas Nesnidal), “Orderflow trading: Delta vs Liquidity” – divergenze delta e assorbimento
+tradingriot.com
+tradingriot.com
+.
+GitHub trading-code, NinjaTrader FreeOrderFlow – repository MIT open-source con indicatori volumetrici e possibili spunti per implementare imbalance, delta, ecc.
+github.com
+.
+Cartea et al. (2025), “Spoofing and Manipulating Order Books with Learning Algorithms” – studio accademico (Oxford) su condizioni che favoriscono lo spoofing
+papers.ssrn.com
+.
+Spoof.io (GitHub) – codice e tesi per rilevare spoofing con RL su dati L3
+github.com
+.
+OrcaBay.io blog, “Iceberg Orders: Hiding (and Seeking) Liquidity” – concetti chiave e come individuare iceberg (ordine che si ricarica)
+orcabay.io
+.
+Shuyue Fu, “Iceberg Detection algorithm (CME)” – progetto UIUC/CME (GitHub Ml_HFT) con individuazione di >11k iceberg in un giorno
+github.com
+.
+Futures.io forum – discussioni su iceberg detector e importanza dei dati MBO (es. thread “Best Order Flow Add-on NT8”)
+futures.io
+, e su strategie con footprint (assorbimento, imbalance) da parte di trader esperti
+futures.io
+reddit.com
+.
+EliteTrader forum – discussioni su esaustione vs assorbimento e affidabilità dei footprint setups
+elitetrader.com
+.
+Elenco Completo dei Pattern di Order Flow da Fonti Americane
+
+Trapped Orders/Traders (ordini o trader intrappolati) – Si verifica quando un gruppo di trader rimane “bloccato” in posizione dopo un falso breakout o un movimento rapido che viene subito riassorbito. In pratica, il prezzo supera un livello chiave attirando breakout trader, per poi invertire rapidamente lasciandoli con posizioni in perdita
+reddit.com
+. Questo pattern è comunemente discusso nei forum USA (es. futures.io) e da educatori order flow, perché evidenzia aree dove la controparte istituzionale potrebbe aver spinto il mercato per poi invertire. Alcune piattaforme identificano queste situazioni con indicatori dedicati (ad esempio ZoneTraderPro su NinjaTrader mostra segnali di Trapped Buyer/Trapped Seller
+zonetraderpro.com
+). Anche strumenti come Bookmap o Jigsaw permettono di individuare trader intrappolati osservando grandi volumi aggressivi seguiti da immediate inversioni di prezzo.
+Delta Divergence (divergenza del delta) – È la discrepanza tra il movimento dei prezzi e il delta (differenza tra acquisti e vendite al mercato)
+tradethematrix.net
+reddit.com
+. Un esempio tipico: il prezzo segna un nuovo massimo mentre il delta cumulativo mostra meno acquisto aggressivo rispetto a un picco precedente. Questo indica che, nonostante il prezzo in aumento, i compratori aggressivi stanno diminuendo – segnale potenziale di inversione perché suggerisce presenza di venditori passivi che assorbono gli acquisti
+reddit.com
+. Il pattern è ben noto in contesti USA (ad es. discusso da trader professionisti e su blog tecnici) ed è supportato in molte piattaforme (Bookmap offre il Cumulative Volume Delta, Sierra Chart e NinjaTrader hanno indicatori di delta) per evidenziare tali divergenze. Studi quantitativi confermano l’efficacia: ad esempio Trade The Matrix nota che un delta in calo con prezzo in salita evidenzia assorbimento da parte di ordini limitati
+tradethematrix.net
+.
+Volume Divergence (divergenza volume-prezzo) – Simile al delta divergence, ma confronta il volume totale scambiato con l’andamento dei prezzi. Si ha divergenza volume-prezzo quando il mercato fa un nuovo massimo o minimo ma con volume inferiore rispetto a precedenti oscillazioni
+prorealcode.com
+. Ad esempio, il prezzo segna un nuovo high mentre i volumi scambiati diminuiscono (nessun aumento corrispondente dei volumi): ciò indica che la spinta è meno partecipata e può preludere a un’inversione
+prorealcode.com
+. Questo concetto è parte integrante dell’analisi tecnica classica ed è frequentemente menzionato anche nell’order flow (ad es. combinato con analisi del cumulative delta). Diverse piattaforme (tutte quelle con grafici volume, da TradingView a Sierra Chart) consentono di valutare visivamente queste divergenze o con indicatori custom. Ad esempio, studi di Gail Mercer mostrano che se price makes a new high on lower volume i compratori “non sono presenti in forza” e spesso il mercato si gira al ribasso
+prorealcode.com
+.
+Weak High/Low (massimo/minimo debole) – Un weak high o weak low è un estremo di sessione considerato “debole” perché raggiunto in corrispondenza di un livello tecnico predefinito o senza un’asta finale decisa. Operativamente, un massimo debole si manifesta quando il mercato tocca ripetutamente lo stesso livello di prezzo (es. un numero tondo o il massimo di un giorno precedente) e non riesce a superarlo
+axiafutures.com
+. Ciò suggerisce che il livello è stato mantenuto artificialmente (ad esempio da vendite passive) e non rappresenta un vero e proprio esaurimento dell’asta. Un massimo/minimo debole viene dunque visto come suscettibile di rottura in futuro: l’asta non è “completata” e probabilmente il mercato tornerà a quel livello per romperlo. Questi concetti provengono dall’Auction Market Theory/Market Profile (ad es. insegnamenti di Jim Dalton) e sono diffusi tra i trader USA. Si individuano con strumenti di Market Profile o volume profile (es. Sierra Chart, MarketDelta) notando i cosiddetti ledges – aree piatte di TPO o volume sull’estremo
+axiafutures.com
+.
+Poor High/Low (massimo/minimo povero) – Un poor high/poor low è un estremo giornaliero che manca di “excess”, ovvero di quell’escursione finale impulsiva tipica di un’asta completa. In termini pratici, un poor high si verifica quando il mercato fa un doppio massimo “piatto” su due periodi di profilo orario (TPO) senza lasciare una coda di vendite singole sopra
+tradebrigade.co
+tradebrigade.co
+. Significato operativo: il primo effetto è che acquirenti rimasti intrappolati in alto (pensando a un breakout) possono causare un arretramento del prezzo perché chiudono in perdita
+tradebrigade.co
+. In secondo luogo, la teoria d’asta suggerisce che un massimo povero indica un’asta terminata in modo non decisivo, quindi prima o poi dovrebbe essere “riparato” con un breakout sopra quel livello
+tradebrigade.co
+. Lo stesso vale al contrario per un poor low. Fonti americane (es. ShadowTrader, Axia Futures
+axiafutures.com
+) ne parlano estesamente: un poor high/low è un segnale che il trend non ha avuto un finale convinto e che la struttura di mercato resta vulnerabile. Piattaforme di profiling (es. Sierra Chart TPO chart) evidenziano facilmente questi estremi senza coda.
+Single Prints (stampe singole) – È un concetto di Market Profile che indica una sequenza di lettere (TPO) presente in un solo periodo orario, senza overlapping con periodi precedenti. Operativamente, una zona di single prints su un profilo significa che in quella fascia di prezzo il mercato ha transitato velocemente, sostenuto da un’aggressività unilaterale (acquirenti o venditori molto decisi)
+reddit.com
+. I single prints segnalano quindi un tentativo di trend in atto: un’asta forte da un solo lato (spesso emotiva o con partecipanti obbligati a inseguire) crea un segmento di prezzo non ri-auzionato
+reddit.com
+reddit.com
+. Studi statistici sul mercato USA mostrano che quando compaiono single prints in una sessione, nel ~72% dei casi il trend prosegue fino a fine giornata senza essere annullato
+reddit.com
+. Questo pattern è ben conosciuto nella comunità USA grazie ai lavori di Jim Dalton e altri. Si identifica su grafici di Market Profile (ad esempio con Sierra Chart, TPO Profile) oppure con strumenti che evidenziano aree di scarsa sovrapposizione tra barre. Un single print non riempito può fungere da supporto/resistenza intraday e spesso i trader lo usano come riferimento per trailing stop o inversioni se viene riempito.
+Unfinished Auctions (aste non concluse) – Chiamate anche unfinished business, si riferiscono a estremi di barra (o di giornata) in cui rimane volume su entrambi i lati bid/ask, suggerendo che l’asta non si è esaurita completamente. In un’asta “finita” ci si aspetta che all’ultimo prezzo scambiato di un massimo restino zero contratti dal lato ask (nessun venditore a mercato oltre quel prezzo) e solo contratti aggressivi in acquisto, indicando un esaurimento. Se invece al nuovo massimo ci sono volumi sia in acquisto che in vendita (es. nel footprint compaiono numeri >0 sia a bid che ask sull’ultimo tick in alto), l’asta è unfinished
+tradedevils-indicators.com
+. Ciò implica che il movimento potrebbe non essere terminato e c’è una probabilità che il prezzo torni a quel livello per “completare” l’asta
+tradedevils-indicators.com
+. Lo stesso principio vale per minimi non conclusi. Questi pattern sono comunemente riconosciuti da trader order flow americani e supportati da varie piattaforme: ad esempio Sierra Chart e NinjaTrader Order Flow hanno impostazioni per evidenziare un unfinished auction sul footprint (spesso marcando l’estremo se non c’è uno zero). Identificarli aiuta a capire che un high/low potrebbe essere rivisto nel breve termine.
+Stacked Buying/Selling (Imbalance Multipli) – Indica la presenza di squilibri (imbalance) aggressivi consecutivi su più livelli di prezzo tutti dalla stessa parte (solo buy o solo sell). Ad esempio, un stacked buying imbalance si ha quando sul footprint compaiono almeno 3 livelli di fila con forte predominio di acquisti al market sul lato ask (es. rapporto bid/ask ≥ 3:1 a tre o più prezzi adiacenti)
+reddit.com
+. Analogamente per le vendite (stacked selling). Questo pattern segnala un’iniziativa decisa: acquirenti disposti a prendere tutto l’offerto su vari tick, spesso preludio a un breakout al rialzo continuativo
+reddit.com
+. Fonti USA come i manuali ATAS e vari blog tecnici spiegano che diversi grandi imbalance di fila formano un “stacked imbalance” riconoscibile nel footprint
+atas.net
+. Se il prezzo torna successivamente in quell’area, tali livelli possono fungere da supporto/resistenza. Molte piattaforme order flow evidenziano automaticamente gli imbalance impilati: NinjaTrader 8 (Order Flow+) li evidenzia sul grafico volumetrico, Sierra Chart consente di colorare gli imbalance consecutivi, e strumenti specializzati come ATAS o Bookmap (con addon footprint) supportano la visualizzazione di questi cluster. Codici e strategie di trading (es. Trader Dale) utilizzano lo stacked imbalance come segnale per ingressi a basso rischio in direzione del flusso dominante.
+Volume Ledges (sporgenze di volume) – Si tratta di livelli di prezzo dove il volume scambiato (nel profilo orizzontale) presenta un improvviso scalino, creando una sorta di ledge (cornice/sporgenza). In termini pratici, un profile ledge appare quando il mercato si ferma ripetutamente a un certo prezzo, accumulando tempo o volume lì, e subito sotto c’è un vuoto di volume
+axiafutures.com
+. Ciò spesso corrisponde a un massimo o minimo ripetuto (es. quattro TPO allineati sullo stesso livello) indicativo che l’asta è stata forzatamente fermata a quel prezzo, senza esplorare livelli superiori/inferiori
+axiafutures.com
+. Un ledge segnala quindi un livello artificiale: in un’asta libera quel prezzo sarebbe superato, ma qualche partecipante (spesso istituzionale) sta assorbendo tutto e bloccando il movimento. Operativamente, un volume ledge offre due spunti: (1) Breakout trade: prima o poi il ledge “dovrebbe” rompersi per completare l’asta, quindi può essere un target per una rottura 
+axiafutures.com
+; (2) Reversal trade: essendo un riferimento evidente, molti trader si posizionano in anticipo per la rottura e piazzano stop dietro il ledge – se la rottura fallisce, quei trader usciti generano un movimento opposto rapido
+axiafutures.com
+. Questo pattern è trattato da Axia Futures e altri educatori USA perché fonde volume profile e order flow (assorbimento su un livello preciso). Piattaforme come Sierra Chart o MarketDelta aiutano a individuarlo sul volume profile/TPO, mentre sul DOM o Bookmap si vede come muro di liquidità statico. Spesso si accompagna ad absorption su quel livello (grandi ordini limite che creano il ledge).
+Liquidity Voids (vuoti di liquidità) – Sono aree di mercato con una temporanea assenza di ordini, in cui il prezzo “salta” rapidamente diversi tick lasciando poco o nulla scambiato nel mezzo
+bookmap.com
+. In un grafico ciò si manifesta come spazi vuoti o candele molto ampie senza ombre significative: segno che mancavano compratori e venditori in quel range di prezzi, causando un movimento impulsivo mentre il mercato cerca nuovo equilibrio
+tradingview.com
+tradingview.com
+. Spesso i liquidity voids compaiono dopo notizie o eventi importanti, oppure in aperture con gap, quando la liquidità si ritira momentaneamente. Un void è simile a un Fair Value Gap ma su scala più ampia
+tradingview.com
+. Nella pratica, i trader USA considerano queste zone come potenziali aree di ritorno del prezzo: col tempo la liquidità tende a “riempire” il vuoto (restacking dell’order book)
+bookmap.com
+ e il gap viene tradato di nuovo. Ad esempio, dopo trimestrali, un’azione può aprire in gap creando un void; man mano gli ordini tornano e spesso il prezzo ritraccia nel void. Il concetto è diffuso sia nell’analisi istituzionale (si parla di inefficienze da colmare) sia nei metodi SMC (ICT enfatizza i liquidity voids come punti di interesse). Bookmap visualizza chiaramente i vuoti di liquidità sul heatmap (aree scure prive di livelli nel book) e strumenti come TradingView/LuxAlgo offrono indicatori per evidenziare gap e void come zone di scarso volume.
+Liquidity Sweeps (sweep di liquidità) – Un liquidity sweep consiste in un movimento rapido del prezzo mirato a colpire un livello pieno di ordini pendenti (stop o liquidità passiva) per attivarli e sfruttarli
+luxalgo.com
+. In pratica è la classica caccia agli stop: un grande player spinge il mercato oltre un supporto/resistenza dove sa che ci sono molti stop order, facendo scattare una raffica di ordini e provocando un picco di volume, per poi invertire la direzione. La definizione operativa (fornita ad es. da LuxAlgo) è: “un liquidity sweep prende di mira uno specifico livello per innescare ordini stop e causare un’inversione di prezzo”
+luxalgo.com
+. È diverso da un liquidity run, dove il mercato rompe un livello e continua (trend) senza inversione. I liquidity sweep sono riconosciuti nei contesti USA di trading istituzionale e SMC; ad esempio molti manuali li descrivono come movimenti a “onda” che puliscono il book a un livello chiave e poi tornano indietro. Indizi tipici: lunghe ombre sulle candele (wick) subito riassorbite, picchi di volume su nuovi high/low seguiti da ritorno sotto/ sopra il livello. Piattaforme come Bookmap consentono di vederli (es. grandi stop eseguiti visualizzati col modulo Stops & Icebergs), e indicatori specializzati (LuxAlgo Liquidity Grab su TradingView
+luxalgo.com
+) marcano graficamente queste barre di sweep che spesso preannunciano inversioni rapide.
+Point of Control Shifts (spostamenti del POC) – Il Point of Control è il livello di prezzo con maggior volume scambiato (o tempo, nei TPO) in una sessione. Un suo spostamento significativo all’interno della giornata indica che il mercato sta trovando valore a livelli nuovi. Ad esempio, un POC che si alza rapidamente durante un trend rialzista, accompagnato da delta positivo persistente, segnala accettazione dei prezzi più alti e può anticipare continuazione del movimento
+reddit.com
+. Viceversa uno spostamento in basso del POC in un downtrend confermato da vendite aggressive suggerisce prosecuzione ribassista. I POC shifts sono osservati dai trader di profilo e order flow USA per capire i cambiamenti di equilibrio: la CME e vari educatori spiegano che quando il valore (POC) si sposta, spesso il prezzo gravita attorno al nuovo POC finché non interviene un’altra variazione significativa. Non esiste un “codice” specifico, ma l’analisi quantitativa delle distribuzioni intraday mostra come certi spostamenti del POC con flusso aggressivo concomitante diano trade di trend continuation affidabili
+reddit.com
+. Qualsiasi piattaforma con Volume Profile consente di monitorare il POC in tempo reale (es. Sierra Chart evidenzia il VPOC corrente, Bookmap mostra il VWAP/POC dinamico nella colonna Volume). Alcuni trader impostano alert quando il POC si sposta in un’area di breakout, utilizzandolo come conferma di accettazione del prezzo.
+Responsive Buying/Selling (acquisti/vendite responsive) – È il comportamento opposto a quello “initiative”. I trader responsive operano in senso contrario al movimento dominante, fornendo liquidità con ordini limite per assorbire l’eccesso e far rientrare il prezzo verso il valore equo. In altre parole, responsive buying significa comprare sui ribassi contro il trend ribassista (buy the dip), mentre responsive selling è vendere sui rialzi di un trend rialzista, il tutto assorbendo l’ordine aggressivo degli altri e cercando inversioni o ritorni in range
+reddit.com
+. Spesso sono operatori di timeframe superiore (OTF) o market maker che vedono il prezzo allontanarsi troppo dal fair value e intervengono in senso opposto (fading). Nei mercati USA, questa distinzione è ben nota: ad esempio la CME Market Profile divide trader initiative (che agiscono in direzione del breakout con ordini aggressivi) da responsive (che reagiscono passivamente, difendendo livelli)
+reddit.com
+. Un chiaro esempio è un rapido spike di prezzo seguito da un immediato ritracciamento: ciò rivela vendite responsive che hanno fatto fade del rally. Non c’è un indicatore unico per individuare il flow responsive, ma i trader guardano segnali come: aumento di volumi su DOM in controtrend (stack sul lato opposto), impronte di assorbimento sul footprint, e pattern come exhaustion e trapped traders creati dall’azione di questi operatori. Piattaforme come Bookmap permettono di vedere limit orders che frenano il prezzo (es. muri che compaiono nel book e non si ritirano), aiutando a identificare acquisti/vendite responsive in atto.
+Fade Trades (operazioni di “fade”) – Fading significa andare contro il movimento corrente, tipicamente dopo un’estensione significativa, anticipando un’inversione o un pullback. Un fade trade in ottica order flow si basa sull’individuare quando un movimento è insostenibile: ad esempio, dopo un breakout iniziale, trader esperti leggono nel flusso se manca follow-through (esaurimento di aggressività, assenza di liquidità oltre il livello) e entrano controtrend approfittando del prezzo “gonfiato”
+bookmap.com
+. Un caso comune: molti retail comprano un breakout senza guardare la liquidità e restano intrappolati; i trader che invece leggono l’order flow possono fare fade del movimento, vendendo vicino al top sapendo che la liquidità era fittizia
+bookmap.com
+. Questo approccio è diffuso tra i trader USA (soprattutto scalper contrarian e market maker): viene insegnato di “non inseguire il prezzo” ma aspettare di fadeare spike irrazionali o rotture senza volume. Già nel pattern Absorption si vede l’idea del fade – ad es. assorbimenti ai massimi usati per shortare breakout falliti
+reddit.com
+. Non è un singolo “pattern” formalizzato, ma piuttosto una strategia/tattica. Si appoggia ad altri segnali (absorption, delta divergence, stop run falliti, ecc.) per validare l’entry. Piattaforme come Bookmap e DOM ladders sono utili per fade trades perché mostrano in tempo reale se l’onda aggressiva si sta prosciugando e appaiono ordini contrari. Molti prop trader (es. presso Axia) combinano fade trades con livelli di profilo e dati di volume per massimizzare il reward/risk quando il mercato ritorna verso il valore.
+Absorption Reversal (inversione da assorbimento) – È un setup di inversione causato dall’assorbimento massiccio di ordini aggressivi da parte di liquidità passiva. Succede spesso su massimi o minimi significativi: grandi ordini limite assorbono l’ultimo impulso di acquisti/vendite, il prezzo smette di avanzare nonostante il tape mostri volumi elevati, e ciò prepara la svolta. L’idea è che quando vedi grandi ordini passivi che tengono testa a forti ordini market, il successivo probabile esito è un’inversione nella direzione opposta (gli iniziatori si sono “esauriti”)
+bookmap.com
+. Ad esempio, assorbimento in denaro su un picco: compratori aggressivi sparano ordini ma il prezzo non sale oltre un certo livello pieno di vendite limite; appena i compratori rallentano, il mercato gira giù rapidamente. Fonti come Axia Futures e Jigsaw hanno mostrato esempi di order flow absorption reversal su minimi di giornata, in cui leggere l’assorbimento sul DOM ha permesso di prendere il rimbalzo
+blog.jigsawtrading.com
+. Tecnicamente, sul footprint un’assorbenza all’estremo appare come cluster di volumi elevati su bid/ask senza avanzamento di prezzo, spesso con delta elevato ma candela bloccata – questo è un segnale di inversione imminente. Molte piattaforme offrono strumenti per rilevare le absorption (Bookmap ha indicatori di large lot, Sierra Chart evidenzia Absorption se POC è all’estremo con volume alto, ecc.). Inoltre, esistono studi quantitativi: Blackeagle Financial ad esempio nota che l’Absorption order flow “often signifies a potential reversal” della direzione di mercato
+blackeaglefg.com
+. Questo pattern, già trattato separatamente dall’assorbimento in sé (che era da escludere), enfatizza la combinazione di assorbimento e successiva inversione del prezzo.
+Failed Auctions (aste fallite) – In termini di Auction Market Theory, si ha un’asta fallita quando il prezzo tenta di oltrepassare un’estremità di range o un livello di asta precedente, ma viene subito rigettato con decisione indicando che non c’era reale accettazione oltre quel livello
+reddit.com
+. Operativamente equivale a un breakout abortito: il mercato esce dai range (ad esempio fa un nuovo massimo oltre il massimo del giorno precedente), attira ordini di breakout, ma poi un forte flusso contrario (vendite aggressive) respinge il prezzo nuovamente dentro la Value Area o il range precedente
+reddit.com
+. Questo lascia spesso un segnale come un’ombra lunga sul grafico giornaliero e può portare a un movimento opposto esteso, dato che chi era entrato sul breakout deve uscire (effetto trap). Nel contesto USA, il concetto è ben noto – CME e vari autori di Market Profile ne parlano: una failed auction al di sopra di un massimo importante spesso porta il mercato velocemente verso l’altro lato del range (magari fino alla opposta Value Area Low). Gli order flow trader identificano un’asta fallita tramite combinazione di segnali: improvviso shift di delta da positivo a negativo sul breakout, incremento di volume ma mancata prosecuzione, comparsa di forti ordini limit che respingono il prezzo, ecc. Piattaforme di profiling mostrano chiaramente il failed auction sul grafico TPO (un TPO single print isolato poi rientrato). Ad esempio, un massimo di sessione con un solo TPO oltre il precedente range, seguito da prezzo che rientra: quell’unica lettera è l’asta fallita. Questo pattern ha valenza istituzionale perché indica dove grandi operatori hanno ritirato la liquidità appena sondati nuovi livelli, segnalando che il mercato non era pronto a trovare accettazione lì.
+Fair Value Gaps (gap di fair value) – Detti anche imbalance nei contesti tecnici, sono gap temporanei nel flusso degli ordini in cui il mercato non scambia in una determinata fascia di prezzo, lasciando un “vuoto” tra due candele consecutivamente
+tradingview.com
+. Tecnicamente, un FVG si identifica su un grafico a candele quando, dopo una forte candela direzionale, la successiva non recupera interamente l’intervallo tra il massimo/minimo della prima e il minimo/massimo della terza candela. Rimane quindi uno spazio tra le ombre di queste candele
+tradingview.com
+. Questo indica che durante quel movimento aggressivo la domanda e offerta non erano in equilibrio – il prezzo si è mosso talmente rapido che ha saltato livelli di fair value. Nel gergo ICT (Inner Circle Trader) e Smart Money, i fair value gap sono aree in cui il mercato potrebbe tornare a “bilanciarsi” in futuro, comportandosi un po’ come i gap tradizionali (spesso “filled” in seguito dai prezzi)
+tradingview.com
+. Negli USA il concetto è diventato popolare negli ultimi anni (anche grazie a community come Futures.io e contenuti su TradingView). In realtà nel trading futures era noto concettualmente da tempo come inefficiency o single print (nell’accezione di vuoto di volume). Supporto da codice: vari indicatori (ad es. Zeiierman, LuxAlgo) rilevano automaticamente FVG e liquidity void, segnalandoli sul chart
+tradingview.com
+. Piattaforme come NinjaTrader o Sierra Chart permettono tramite script di evidenziare questi gap. L’importanza operativa è che i fair value gap fungono da calamita per il prezzo: rappresentano aree di scarsa resistenza dove, in assenza di contratti scambiati, il mercato tende a tornare a testare (in cerca di ordini)
+tradingview.com
+. Trader istituzionali li monitorano per inserire ordini pendenti al “fair value” in caso di ritorno, mentre trader retail li usano come target di take profit o zone per cercare entrate contrarian quando il gap viene colmato.
+Fonti: Axia Futures, Bookmap e CME blog, forum Futures.io/EliteTrader, manuali Market Profile (Jim Dalton), documentazione tecniche di piattaforme (Sierra Chart, NinjaTrader) e pubblicazioni accademiche/quantitative citate nelle spiegazioni sopra
+reddit.com
+tradebrigade.co
+bookmap.com
+, etc. (Vedi riferimenti in linea per ciascun pattern).

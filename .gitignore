@@ -1,0 +1,39 @@
+# File dati specifici (grandi)
+data/raw/ES*.txt
+data/raw/range_candles.csv
+
+# Directory results (da creare)
+data/results/
+
+# File in sviluppo / privati
+docs/codici che servono.txt
+ninjatrader/
+
+# Notebooks (non necessari su git)
+notebooks/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Jupyter 
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Backup e temporanei
+*.bak
+*.tmp
+*.log
+
+# Virtual environment
+venv/
+env/
