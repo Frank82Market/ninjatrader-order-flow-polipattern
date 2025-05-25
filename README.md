@@ -17,16 +17,17 @@ Questo progetto utilizza dati **Market By Order (MBO/Level 2)** da feed **Rithmi
 ## 🏗️ Struttura del Progetto
 
 ```
-progetto-ninjatrader/
+ninjatrader-order-flow-polipattern/
 ├── scripts/                          # Script Python per analisi
-│   └── ricerca_parametri_pattern.py
+│   ├── estrai_rangebar.py            # Estrazione range bar da tick
+│   └── ricerca_parametri_trapped_orders.py # Analisi pattern trapped orders
 ├── data/
 │   ├── raw/                          # Dati tick e range bar (non inclusi)
 │   └── results/                      # Output analisi (generati)
 ├── docs/                             # Documentazione
 │   ├── patternOrderFlow.txt          # Dettagli completi dei pattern
-│   └── riassunti_workflow.txt
-└── notebooks/                        # Jupyter notebooks per ricerca
+│   └── riassunti_workflow.txt        # Workflow del progetto
+└── README.md
 ```
 
 ## 🔧 Setup e Installazione
@@ -38,26 +39,31 @@ progetto-ninjatrader/
 
 ### Installazione
 ```bash
-git clone [repository-url]
-cd progetto-ninjatrader
+git clone https://github.com/Frank82Market/ninjatrader-order-flow-polipattern.git
+cd ninjatrader-order-flow-polipattern
 pip install pandas numpy
 ```
 
 ### Preparazione Dati
 1. Esporta dati tick da NinjaTrader in formato `.Last.txt`
 2. Posiziona i file in `data/raw/`
-3. Genera range bar usando gli script del progetto
+3. Genera range bar usando `scripts/estrai_rangebar.py`
 
 ## 🚀 Utilizzo
 
-### 1. Analisi Pattern
+### 1. Estrazione Range Bar
 ```bash
 cd scripts
-python ricerca_parametri_pattern.py
+python estrai_rangebar.py
 ```
 
-### 2. Output Generato
-- `data/results/pattern_structural_zones.csv` - Pattern identificati
+### 2. Analisi Pattern Trapped Orders
+```bash
+python ricerca_parametri_trapped_orders.py
+```
+
+### 3. Output Generato
+- `data/results/trapped_orders_structural_zones.csv` - Pattern identificati
 - `data/results/effectiveness_by_zones.csv` - Statistiche di efficacia
 
 ## 📊 Metodologia di Analisi
@@ -79,15 +85,16 @@ python ricerca_parametri_pattern.py
 - Identificazione soglie ottimali per massimizzare efficacia
 - Parametrizzazione basata su evidenza statistica
 
-## 📋 Parametri del Pattern
+## 📋 Pattern Attualmente Implementati
 
-I parametri vengono ottimizzati attraverso analisi statistica:
+### Trapped Orders
+Pattern di ordini intrappolati identificati in contesti di struttura di mercato:
+- **HH_END**: Fine di movimenti Higher High
+- **LL_END**: Fine di movimenti Lower Low
+- **HL_PULLBACK**: Pullback su Higher Low
+- **LH_PULLBACK**: Pullback su Lower High
 
-- **Range minimo**: Dimensione minima della barra
-- **Delta swing**: Oscillazione minima del delta nella barra
-- **Volume threshold**: Soglia volume per significatività
-- **Wick ratio**: Rapporto wick/body della candela
-- **Extreme volume %**: Concentrazione volume ai livelli estremi
+I parametri vengono ottimizzati attraverso analisi statistica su dati storici.
 
 ## 🎯 Roadmap
 
@@ -95,17 +102,17 @@ I parametri vengono ottimizzati attraverso analisi statistica:
 - [x] Costruzione range bar da dati tick
 - [x] Calcolo delta e volume per livello di prezzo
 - [x] Identificazione struttura di mercato
-- [x] Framework analisi pattern
+- [x] Framework analisi pattern Trapped Orders
 
 ### 🔄 In Corso
-- [ ] Ottimizzazione parametri su dati storici
+- [ ] Ottimizzazione parametri Trapped Orders
 - [ ] Validazione statistica pattern
 
 ### 📅 Prossimi Step
 - [ ] Sviluppo indicatore NinjaScript
+- [ ] Implementazione pattern aggiuntivi
 - [ ] Testing real-time
 - [ ] Backtesting sistematico
-- [ ] Ottimizzazione performance
 
 ## 📖 Documentazione
 
@@ -129,10 +136,10 @@ Per **modifiche, contributi o collaborazioni**, contattare l'autore del progetto
 
 ## 📄 Licenza
 
-Tutti i diritti riservati - Solo consultazione
+MIT License
 
 ---
 
-**Autore**: [Nome]  
+**Autore**: Frank82Market  
 **Data**: Maggio 2025  
 **Versione**: 1.0-dev
