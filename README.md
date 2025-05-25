@@ -1,14 +1,15 @@
-# NinjaTrader Order Flow - Trapped Orders Pattern
+# NinjaTrader Order Flow - Multi Pattern Analysis
 
-Un progetto per lo sviluppo di indicatori NinjaTrader basati sull'analisi dell'order flow, con focus sui pattern **Trapped Orders**.
+Un progetto per lo sviluppo di indicatori NinjaTrader basati sull'analisi dell'order flow, con framework per **multiple pattern detection**.
 
 ## 📊 Panoramica del Progetto
 
-Questo progetto utilizza dati **Market By Order (MBO/Level 2)** da feed **Rithmic** per identificare e quantificare pattern di order flow su **range bar**. L'obiettivo è creare indicatori NinjaTrader che rilevano automaticamente situazioni di "ordini intrappolati" per trading sistematico.
+Questo progetto utilizza dati **Market By Order (MBO/Level 2)** da feed **Rithmic** per identificare e quantificare diversi pattern di order flow su **range bar**. L'obiettivo è creare un framework modulare per il riconoscimento automatico di pattern order flow per trading sistematico.
 
 ### 🎯 Obiettivi
 
-- **Identificazione automatica** di pattern Trapped Orders
+- **Identificazione automatica** di pattern order flow
+- **Framework modulare** per diversi pattern
 - **Parametrizzazione scientifica** basata su analisi statistica
 - **Integrazione NinjaTrader** per segnali real-time
 - **Analisi di efficacia** su dati storici
@@ -18,7 +19,7 @@ Questo progetto utilizza dati **Market By Order (MBO/Level 2)** da feed **Rithmi
 ```
 progetto-ninjatrader/
 ├── scripts/                          # Script Python per analisi
-│   └── ricerca_parametri_trapped_orders.py
+│   └── ricerca_parametri_pattern.py
 ├── data/
 │   ├── raw/                          # Dati tick e range bar (non inclusi)
 │   └── results/                      # Output analisi (generati)
@@ -52,11 +53,11 @@ pip install pandas numpy
 ### 1. Analisi Pattern
 ```bash
 cd scripts
-python ricerca_parametri_trapped_orders.py
+python ricerca_parametri_pattern.py
 ```
 
 ### 2. Output Generato
-- `data/results/trapped_orders_structural_zones.csv` - Pattern identificati
+- `data/results/pattern_structural_zones.csv` - Pattern identificati
 - `data/results/effectiveness_by_zones.csv` - Statistiche di efficacia
 
 ## 📊 Metodologia di Analisi
