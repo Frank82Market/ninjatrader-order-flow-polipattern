@@ -56,11 +56,17 @@ while i < len(df):
         volume += this_vol
 
         # Aggiorna volume/delta per livello di prezzo
+                # ...esistente...
+        # Aggiorna volume/delta per livello di prezzo
         if price not in price_stats:
-            price_stats[price] = {'volume': 0, 'delta': 0}
+            price_stats[price] = {'volume': 0, 'delta': 0, 'bid_volume': 0, 'ask_volume': 0}
         price_stats[price]['volume'] += this_vol
         price_stats[price]['delta'] += delta_tick
-
+        if df.iloc[j]['last'] >= df.iloc[j]['ask']:
+            price_stats[price]['ask_volume'] += this_vol
+        elif df.iloc[j]['last'] <= df.iloc[j]['bid']:
+            price_stats[price]['bid_volume'] += this_vol
+        # ...esistente...
         delta_high = max(delta_high, cumulative_delta)
         delta_low = min(delta_low, cumulative_delta)
         delta_close = cumulative_delta
