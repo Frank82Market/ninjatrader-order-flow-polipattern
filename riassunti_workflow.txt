@@ -5,186 +5,78 @@ OBIETTIVO DEL PROGETTO
 Sviluppare un indicatore NinjaTrader per il riconoscimento di pattern TRAPPED ORDERS 
 utilizzando dati order flow (MBO/Level 2) da feed Rithmic su range bar.
 
-LAVORO COMPLETATO
-=================
+STORICO LAVORO E MODIFICHE
+==========================
 
 1. COSTRUZIONE INFRASTRUTTURA DATI
 ----------------------------------
-- File: data/raw/ES 06-25.Last.txt (File dati tick-by-tick originali)
-- File: data/raw/range_candles.csv (Range bar a 8 tick con delta e volume per livello di prezzo)
-- Logica range bar fedele a NinjaTrader (phantom bars, chiusura precisa)
+- Creati file dati tick-by-tick originali e range bar (data/raw/ES 06-25.Last.txt, data/raw/range_candles.csv).
+- Implementata logica range bar fedele a NinjaTrader (phantom bars, chiusura precisa).
+- Nei dati aggregati per livello di prezzo sono stati aggiunti volume, delta, bid_volume e ask_volume.
 
-2. DEFINIZIONE PATTERN TRAPPED ORDERS
--------------------------------------
-- Pattern tecnico: Inversione rapida nella stessa candela
-- Due varianti: DIVERGENCE (prezzo vs delta opposti) e CONFIRMATION (prezzo e delta allineati)
-- Contesto strutturale: Pattern cercati in punti specifici della market structure
+2. DEFINIZIONE E PRIMA IMPLEMENTAZIONE PATTERN
+----------------------------------------------
+- Definiti i pattern trapped orders: inversione rapida nella stessa candela, con varianti divergence (prezzo vs delta opposti) e confirmation (prezzo e delta allineati).
+- Inizialmente la ricerca era vincolata a zone strutturali (HH_END, LL_END, HL_PULLBACK, LH_PULLBACK) identificate tramite massimi/minimi locali.
+- Separazione tra logica di contesto (dove cercare) e quantitativa (cosa cercare).
 
-3. APPROCCIO SCIENTIFICO
------------------------
-- Analisi quantitativa: Parametrizzazione basata su performance reali
-- Contesto strutturale: Pattern rilevanti solo in zone HH_END, LL_END, HL_PULLBACK, LH_PULLBACK
-- Separazione logica: Contesto (dove cercare) vs Quantitativo (cosa cercare)
+3. PRIMA VERSIONE ANALISI QUANTITATIVA
+--------------------------------------
+- Analisi quantitativa parametrica: filtri su volume, delta, eccessi agli estremi, inversione di direzione.
+- Pipeline: identificazione zone strutturali → ricerca pattern solo su queste zone → misurazione efficacia → validazione visiva tramite plotting.
+- Output: pattern identificati e performance per zona strutturale.
 
-FILE CORRENTI DEL PROGETTO
-===========================
+4. REVISIONE E SEMPLIFICAZIONE WORKFLOW (MAGGIO 2025)
+------------------------------------------------------
+- **Abolita la ricerca vincolata alle sole zone strutturali:** ora la pipeline analizza tutte le candele, senza filtro di market structure.
+- **Semplificata la logica di individuazione:** i filtri quantitativi vengono applicati su tutte le candele, senza classificazione preventiva delle zone.
+- **Rimosse/ rese opzionali le funzioni di market structure:** la pipeline produce un unico file di output con tutti i pattern rilevati secondo i parametri quantitativi.
+- **Aggiornamento della documentazione e dei report:** ora riferiti all’intero dataset, non più suddivisi per zona strutturale.
+- **Motivazione:** aumentare la flessibilità e testare la robustezza dei parametri su tutto il flusso dati.
+- **Nota:** la logica di market structure potrà essere reintrodotta come filtro opzionale in futuro.
 
-STRUTTURA DIRECTORY
--------------------
+5. NUOVI FILTRI E DEDUPLICA
+---------------------------
+- **Filtro sugli estremi:** vengono considerati solo i pattern in cui, nella finestra successiva (5, 10, 20 barre), non viene mai rotto l’estremo della candela di pattern nella direzione originaria.
+- **Deduplica dei pattern:** se una candela rispetta il filtro per più finestre, viene mantenuta solo la versione con la finestra più lunga.
+
+6. AGGIUNTA IMBALANCE E STATISTICHE DETTAGLIATE
+-----------------------------------------------
+- **Aggiunta rilevazione e salvataggio imbalance:** per ogni candela vengono calcolati e salvati i valori di imbalance (x2, x3, x4) sia lato alto che basso, nei primi/ultimi 3 livelli di prezzo.
+- **Aggiunta statistica sulle candele con imbalance:** lo script di analisi statistica ora riporta, per ciascuna categoria (divergenti e non divergenti), quante candele presentano almeno un imbalance significativo.
+- **Output statistico dettagliato:** il file di output delle statistiche riporta, per divergenti e non divergenti:
+    - Statistiche max_excursion (punti di prezzo)
+    - Statistiche n_bars_excursion (numero barre)
+    - Distribuzione direzione prima/dopo
+    - Distribuzione window
+    - Numero e percentuale di candele con almeno un imbalance
+
+7. FILE CREATI E MODIFICATI
+---------------------------
+- **Creati:**
+  - `scripts/estrazione_stat_trapped_orders_pattern.py` (analisi statistica automatica dei risultati)
+  - `stat/result_stat_xx_yy.txt` (output statistico per ogni combinazione di parametri)
+  - `data/results/trapped_orders_volX_deltaY.csv` (output pattern filtrati per ogni combinazione di parametri)
+- **Modificati:**
+  - `scripts/ricerca_parametri_trapped_orders.py` (deduplica, filtro sugli estremi, calcolo imbalance, output dettagliato)
+  - `riassunti_workflow.txt` (aggiornamento documentazione e tracciamento modifiche)
+
+STRUTTURA ATTUALE DEL PROGETTO
+==============================
 progetto ninjatrader/
 ├── data/
 │   ├── raw/
-│   │   ├── ES 06-25.Last.txt          (Dati tick originali)
-│   │   └── range_candles.csv          (Range bar elaborate)
-│   └── results/                       (Output analisi - da creare)
+│   │   ├── ES 06-25.Last.txt
+│   │   └── range_candles.csv
+│   └── results/
+│       └── trapped_orders_volX_deltaY.csv
+├── stat/
+│   └── result_stat_xx_yy.txt
 ├── scripts/
-│   └── ricerca_parametri_trapped_orders.py  (Script analisi principale)
+│   ├── ricerca_parametri_trapped_orders.py
+│   └── estrazione_stat_trapped_orders_pattern.py
 ├── docs/
-│   └── patternOrderFlow.txt           (Documentazione pattern)
-└── notebooks/                         (Per analisi future)
+│   └── patternOrderFlow.txt
+└── notebooks/
 
-FILE CHIAVE PER QUESTA FASE
----------------------------
-
-scripts/ricerca_parametri_trapped_orders.py
-FUNZIONI PRINCIPALI:
-- identify_structure_zones(): Identifica HH, LL, HL, LH nella market structure
-- find_trapped_orders_in_zones(): Cerca pattern solo nelle zone strutturali rilevanti
-- measure_effectiveness(): Misura performance dei pattern (1, 3, 5, 10 barre forward)
-- generate_parameter_optimization_report(): Genera report con parametri ottimali
-
-data/raw/range_candles.csv
-COLONNE CHIAVE:
-- open, high, low, close: OHLC della range bar
-- delta_open, delta_high, delta_low, delta_close: Delta cumulative
-- price_stats: Volume e delta per ogni livello di prezzo
-- volume, direction: Metriche aggregate
-
-PROCESSO ATTUALE
-================
-
-FASE 1: RICERCA PARAMETRI (In corso)
-------------------------------------
-1. Identificazione contesto: Trova zone HH_END, LL_END, HL_PULLBACK, LH_PULLBACK
-2. Pattern detection: Cerca trapped orders solo in quelle zone
-3. Misurazione performance: Calcola efficacia (success rate, punti medi)
-4. Ottimizzazione: Determina parametri numerici ottimali
-
-FASE 2: SVILUPPO INDICATORE (Prossimo)
---------------------------------------
-- Traduzione parametri ottimali in NinjaScript
-- Plot automatico quando condizioni soddisfatte
-- Implementazione real-time senza analisi di contesto
-
-OUTPUT ATTESO DALLA FASE CORRENTE
-==================================
-
-FILE RESULTS:
-- trapped_orders_structural_zones.csv: Pattern identificati con caratteristiche
-- effectiveness_by_zones.csv: Performance per ogni pattern
-
-PARAMETRI FINALI:
-TRAPPED ORDERS Ottimizzati:
-- Range minimo: X.XX punti
-- Delta swing minimo: XXX contratti  
-- Volume minimo: XXX contratti
-- Wick ratio minimo: X.XX
-- Extreme volume %: XX%
-- Success rate atteso: XX%
-
-PREPARAZIONE REPOSITORY GIT
-============================
-
-FILE DA INCLUDERE:
-- scripts/ricerca_parametri_trapped_orders.py
-- data/raw/range_candles.csv 
-- docs/patternOrderFlow.txt
-- README.md (da creare)
-- .gitignore (da creare per escludere file grandi/temporanei)
-
-PROGRESSO E LEZIONI APPRESE
-Abbiamo chiarito che la struttura di mercato su range bar non si basa su distanze fisse in tick o punti, ma sulla sequenza di pivot significativi (HH, LL, HL, LH), identificati tramite massimi/minimi locali.
-La ricerca dei pattern di trapped orders deve essere effettuata:
-sia sulla barra dell’estremo strutturale (cioè la barra che realizza HH, LL, HL, LH)
-sia sulle barre successive che ritestano il livello di prezzo dell’estremo (entro una certa tolleranza, es. 1 tick)
-È fondamentale validare visivamente i risultati: abbiamo deciso di implementare una funzione di plotting per visualizzare le candele e i pattern trovati, così da verificare la coerenza della logica.
-La pipeline attuale è quindi:
-Identificazione delle zone strutturali (HH_END, LL_END, HL_PULLBACK, LH_PULLBACK)
-Ricerca dei trapped orders solo su queste zone e sui retest
-Misurazione dell’efficacia dei pattern trovati
-Visualizzazione grafica per validazione qualitativa
-RIASSUNTO STATO LAVORO – TRAPPED ORDERS
-
-Abbiamo ricostruito lo script da zero, procedendo step-by-step e commentando ogni funzione.
-Attualmente lo script contiene:
-Parsing della colonna price_stats per ottenere volume e delta per livello di prezzo.
-Funzione per identificare eccessi volumetrici/delta agli estremi della candela (is_extreme_excess), parametrizzabile.
-Funzione per analizzare la reazione del prezzo prima e dopo la candela (analyze_price_reaction).
-Funzione per determinare la direzione prevalente delle candele in una finestra (get_direction).
-Manca ancora: il ciclo principale che scorre tutte le candele, applica i filtri quantitativi e salva le candele che rispettano i criteri (eccesso volumetrico agli estremi + inversione di direzione tra prima e dopo).
-Quando riprenderemo, dovremo:
-Implementare il ciclo principale di classificazione delle trapped candles.
-Salvare i risultati per analisi/statistiche.
-(Opzionale) Aggiungere funzioni di visualizzazione o ulteriori analisi.
-Nota per la ripresa:
-Ripartire dal ciclo principale che applica i filtri e salva le candele campione, usando le funzioni già pronte.
-
-MODIFICHE E IMPLEMENTAZIONI ALLO SCRIPT ricerca_parametri_trapped_orders.py
-
-- Aggiunta funzione parse_price_stats per convertire la colonna price_stats in dict.
-- Aggiunta funzione extract_volume_delta_per_level per estrarre volume e delta per livello di prezzo.
-- Implementato filtro quantitativo agli estremi con is_extreme_excess (parametrico su livelli e soglie).
-- Parametri di filtro richiesti all’utente da terminale.
-- Aggiunta funzione analyze_price_reaction per calcolare max/min prima e dopo la candela (finestre 5/10/20).
-- Aggiunta funzione get_direction per determinare la direzione prevalente delle candele prima/dopo.
-- Calcolo e salvataggio divergenza prezzo/delta (is_divergent) nell’output.
-- Aggiunta funzione detect_imbalances per rilevare imbalance x2/x3/x4 negli ultimi/primi 3 livelli (alto/basso).
-- Aggiunta funzione max_excursion_until_return per misurare il movimento massimo dopo la candela trapped fino al ritorno al prezzo di chiusura.
-- Ciclo principale che applica tutti i filtri, calcola i parametri, salva i risultati in un CSV nominato con i parametri di test.
-- Output: per ogni candela campione vengono salvati indice, timestamp, prezzo di chiusura, volume, direzione prima/dopo, divergenza, reazione del prezzo, imbalance, escursione massima e parametri di test usati.
-
-Ultimo aggiornamento: 26 maggio 2025
-
-MODIFICHE EFFETTUATE FINO AD ORA
-Estrazione Range Bar
-
-Modificato lo script estrai_rangebar.py per includere nei dati aggregati per ogni livello di prezzo anche i campi bid_volume e ask_volume oltre a volume e delta.
-Ora il campo price_stats di ogni barra contiene:
-{prezzo: {'volume': x, 'delta': y, 'bid_volume': z, 'ask_volume': w}}
-Questo permette il calcolo delle imbalance bid/ask reali.
-Parsing e Analisi
-
-Aggiornata la funzione parse_price_stats nello script di analisi per gestire la nuova struttura del campo price_stats.
-Aggiornata la funzione detect_imbalances in ricerca_parametri_trapped_orders.py per usare i nuovi campi bid_volume e ask_volume (non più bid e ask).
-Verificato che i dati estratti siano coerenti e che i campi bid_volume e ask_volume siano effettivamente popolati nei record.
-Pipeline Analitica
-
-Confermata la pipeline:
-Estrazione range bar con volume/delta/bid_volume/ask_volume per livello.
-Analisi quantitativa con filtri sugli estremi e calcolo imbalance.
-Output CSV con tutti i parametri rilevanti per ogni candela campione.
-Ultimo aggiornamento: 26 maggio 2025
-
-MODIFICHE RECENTI AL WORKFLOW E ALLO SCRIPT DI ANALISI
-=======================================================
-
-- **Abolita la ricerca vincolata alle sole zone strutturali (HH_END, LL_END, HL_PULLBACK, LH_PULLBACK):**
-  Ora la pipeline di analisi non filtra più i pattern trapped orders esclusivamente in base alla market structure. La ricerca dei pattern avviene su tutte le candele, indipendentemente dalla loro posizione rispetto ai pivot strutturali.
-
-- **Semplificata la logica di individuazione dei pattern:**
-  La funzione principale ora applica i filtri quantitativi (volume, delta, eccessi agli estremi, inversione di direzione) su tutte le candele, senza richiedere la classificazione preventiva delle zone strutturali.
-
-- **Rimosse o rese opzionali le funzioni:**
-  - `identify_structure_zones`
-  - `find_trapped_orders_in_zones`
-  - La pipeline non salva più i risultati separati per zona strutturale, ma produce un unico file di output con tutti i pattern rilevati secondo i parametri quantitativi.
-
-- **Aggiornamento della documentazione e dei report:**
-  I report e le statistiche ora si riferiscono all’intero dataset, non più suddivisi per zona strutturale.
-
-- **Motivazione della modifica:**
-  La scelta è stata fatta per aumentare la flessibilità dell’analisi quantitativa e permettere la valutazione dei pattern trapped orders anche in assenza di una chiara struttura di mercato, o per testare la robustezza dei parametri su tutto il flusso dati.
-
-- **Nota:** Se necessario, la logica di market structure potrà essere reintrodotta come filtro opzionale in una fase successiva.
-
-Ultimo aggiornamento: [inserisci data odierna]
+Ultimo aggiornamento: 27 maggio 2025

@@ -180,6 +180,12 @@ if __name__ == "__main__":
                 dir_after = get_direction(df, idx+1, min(len(df), idx+1+win))
                 if dir_before != 'neutral' and dir_after != 'neutral' and dir_before != dir_after:
                     reaction = analyze_price_reaction(df, idx, window=win)
+                    if dir_before == 'up':
+                        if reaction['max_after'] > reaction['max_before']:
+                            continue  # Salta, estremo rotto
+                    elif dir_before == 'down':
+                        if reaction['min_after'] < reaction['min_before']:
+                            continue  # Salta, estremo rotto
                     # Calcolo divergenza
                     delta = sum(delta_per_level.values())
                     price_dir = 1 if row['close'] > row['open'] else -1
@@ -209,5 +215,11 @@ if __name__ == "__main__":
 
     # Salva l'output con i parametri nel nome file
     output_name = f"trapped_orders_vol{vol_threshold}_delta{delta_threshold}.csv"
-    pd.DataFrame(results).to_csv(os.path.join(DEFAULT_RESULTS_DIR, output_name), index=False)
+    df_results = pd.DataFrame(results)
+
+    # Deduplica: tieni solo la finestra più lunga per ogni candela (index)
+    df_results = df_results.sort_values(['index', 'window'], ascending=[True, False])
+    df_results = df_results.drop_duplicates(subset=['index'], keep='first')
+
+    df_results.to_csv(os.path.join(DEFAULT_RESULTS_DIR, output_name), index=False)
     print(f"Risultati salvati in {output_name}")
