@@ -2,8 +2,14 @@
 data/raw/ES*.txt
 data/raw/range_candles.csv
 
+# File processed (generati da script)
+data/processed/*.csv
+
 # Directory results (da creare)
 data/results/
+
+# Directory stat (output statistici da non tracciare)
+stat/
 
 # File in sviluppo / privati
 docs/codici che servono.txt
