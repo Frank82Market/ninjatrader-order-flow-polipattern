@@ -7,9 +7,20 @@ data/processed/*.csv
 
 # Directory results (da creare)
 data/results/
+data/results/*.csv
+
+# Directory grid search (generati da automazione_statistica.py)
+data/grid_search/
+data/grid_search/*.csv
+data/grid_search/*.json
 
 # Directory stat (output statistici da non tracciare)
 stat/
+stat/*.txt
+
+# File CSV trigger generati dagli script
+trigger_candele_*.csv
+trapped_orders_*.csv
 
 # File in sviluppo / privati
 docs/codici che servono.txt
