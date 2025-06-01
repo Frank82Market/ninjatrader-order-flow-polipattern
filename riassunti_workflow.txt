@@ -5,8 +5,8 @@ OBIETTIVO DEL PROGETTO
 Sviluppare un indicatore NinjaTrader per il riconoscimento di pattern TRAPPED ORDERS 
 utilizzando dati order flow (MBO/Level 2) da feed Rithmic su range bar.
 
-STORICO LAVORO E MODIFICHE
-==========================
+STORICO LAVORO E MODIFICHE (ORDINE CRONOLOGICO)
+===============================================
 
 1. COSTRUZIONE INFRASTRUTTURA DATI
 ----------------------------------
@@ -30,14 +30,13 @@ STORICO LAVORO E MODIFICHE
 ------------------------------------------------------
 - **Abolita la ricerca vincolata alle sole zone strutturali:** ora la pipeline analizza tutte le candele, senza filtro di market structure.
 - **Semplificata la logica di individuazione:** i filtri quantitativi vengono applicati su tutte le candele, senza classificazione preventiva delle zone.
-- **Rimosse/ rese opzionali le funzioni di market structure:** la pipeline produce un unico file di output con tutti i pattern rilevati secondo i parametri quantitativi.
-- **Aggiornamento della documentazione e dei report:** ora riferiti all’intero dataset, non più suddivisi per zona strutturale.
+- **Rimosse/rese opzionali le funzioni di market structure:** la pipeline produce un unico file di output con tutti i pattern rilevati secondo i parametri quantitativi.
+- **Aggiornamento della documentazione e dei report:** ora riferiti all'intero dataset, non più suddivisi per zona strutturale.
 - **Motivazione:** aumentare la flessibilità e testare la robustezza dei parametri su tutto il flusso dati.
-- **Nota:** la logica di market structure potrà essere reintrodotta come filtro opzionale in futuro.
 
 5. NUOVI FILTRI E DEDUPLICA
 ---------------------------
-- **Filtro sugli estremi:** vengono considerati solo i pattern in cui, nella finestra successiva (5, 10, 20 barre), non viene mai rotto l’estremo della candela di pattern nella direzione originaria.
+- **Filtro sugli estremi:** vengono considerati solo i pattern in cui, nella finestra successiva (5, 10, 20 barre), non viene mai rotto l'estremo della candela di pattern nella direzione originaria.
 - **Deduplica dei pattern:** se una candela rispetta il filtro per più finestre, viene mantenuta solo la versione con la finestra più lunga.
 
 6. AGGIUNTA IMBALANCE E STATISTICHE DETTAGLIATE
@@ -61,90 +60,141 @@ STORICO LAVORO E MODIFICHE
   - `scripts/ricerca_parametri_trapped_orders.py` (deduplica, filtro sugli estremi, calcolo imbalance, output dettagliato)
   - `riassunti_workflow.txt` (aggiornamento documentazione e tracciamento modifiche)
 
+8. CORREZIONE FONDAMENTALE LOGICA DATI (29/05/2025)
+--------------------------------------------------
+**PROBLEMA IDENTIFICATO:** Errori strutturali nella costruzione dei dati che compromettevano tutti gli script:
+
+**Formato Dati Originale (PROBLEMATICO):**
+```
+open_time,close_time,open,high,low,close,volume,delta_open,delta_high,delta_low,delta_close,direction,price_stats
+```
+
+**Errori Specifici:**
+- **Delta per livello inutile:** ogni livello aveva delta = ask_volume - bid_volume (non serve)
+- **Colonne obsolete:** delta_open, delta_high, delta_low, delta_close (basati su prezzo, non order flow)
+- **Livelli duplicati:** stesso prezzo ripetuto più volte in price_stats senza aggregazione
+- **Disordine prezzi:** livelli non ordinati dal più piccolo al più grande
+
+**Delta Candela (CORRETTO):**
+- VECCHIO: delta per livello (bid-ask su ogni livello) ❌
+- NUOVO: delta candela = (Σ ask_volume_tutti_livelli) - (Σ bid_volume_tutti_livelli) ✅
+
+**Price Stats (CORRETTO):**
+- VECCHIO: livelli duplicati con delta per livello ❌  
+- NUOVO: livelli aggregati ordinati (8 livelli) con volume_tot, bid_volume_tot, ask_volume_tot ✅
+
+**Script Pulizia Creato:**
+- `pulizia_candle_data_raw.py`: aggrega livelli duplicati, ordina per prezzo, calcola delta candela corretto
+- Output: `pulito_range_candles.csv` (base per tutti gli script successivi)
+
+**Nuova Struttura Output:**
+```
+open_time, close_time, open, high, low, close, volume, delta_candela, direction, price_stats
+```
+
+**Nuova Struttura Price_Stats:**
+```json
+{
+  "5761.0": {"volume": 14, "bid_volume": 3, "ask_volume": 11},
+  "5761.25": {"volume": 11, "bid_volume": 0, "ask_volume": 11},
+  ...8 livelli totali ordinati...
+}
+```
+
+9. REFACTORING COMPLETO ARCHITETTURA SCRIPT (31/05/2025)
+-------------------------------------------------------
+**MOTIVAZIONE:** Eliminare confusione tra filtri reali e classificazioni, separare logiche, estendere range parametri
+
+**PROBLEMA PRECEDENTE:**
+- Mixing tra trigger detection (filtri) e pattern classification (descrizioni)
+- Winrate artificialmente bassi per grid search limitato a soglie basse (≤30%)
+- Filtri divergenti applicati senza analisi comparativa
+- Mancanza di metriche separate per candele divergenti vs non-divergenti
+
+**NUOVA ARCHITETTURA IMPLEMENTATA:**
+
+### A. SCRIPT PRINCIPALE SEMPLIFICATO (ricerca_parametri_trapped_orders.py)
+```
+UNICO VERO FILTRO: has_volume_aggression_trigger()
+- vol_threshold: concentrazione volume agli estremi (20%-60%)
+- aggression_threshold: concentrazione ask/bid agli estremi (30%-90%)
+
+TUTTE LE ALTRE FUNZIONI SONO CLASSIFICAZIONI (NON FILTRI):
+- is_divergent_candle(): descrive se delta e direction sono opposti
+- classify_trigger_position(): descrive se trigger è HIGH/LOW/BOTH
+- detect_imbalances_by_trigger_position(): calcola imbalance per zona
+- classify_imbalance_coherence(): descrive coerenza imbalance
+- detect_exhaustion_by_trigger_position(): rileva crolli volume
+- classify_directional_reversal(): simula trading con stop loss
+```
+
+### B. AUTOMAZIONE STATISTICA GRID SEARCH (automazione_statistica.py)
+```
+GRID SEARCH ESTESO:
+- vol_threshold: [0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6] (9 valori)
+- aggression_threshold: [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9] (8 valori)  
+- exhaustion_threshold: [0.05, 0.1, 0.15, 0.2, 0.25] (5 valori)
+- time_slots: ["09:00-15:30", "15:30-18:00"] (2 valori)
+TOTALE: 720 combinazioni (vs 60 precedenti)
+
+METRICHE SEPARATE:
+- winrate_divergent: winrate solo candele divergenti
+- winrate_non_divergent: winrate solo candele non-divergenti
+- n_divergent/n_non_divergent: conteggi separati
+- divergent_percentage: % candele divergenti nel trigger set
+
+FILTRO MINIMO RIDOTTO: 3 trades (era 10) per catturare setup ultra-selettivi
+```
+
+### C. ANALISI FINESTRE DIREZIONALI (test_finestre_direzionali.py)
+```
+NUOVO SCRIPT PER OTTIMIZZAZIONE:
+- Analizza statisticamente finestre before/after validation (5-25 candele)
+- Calcola probabilità di successo per ogni finestra
+- Genera ordine ottimale di test basato su success rate
+- Output: optimal_windows_config.json per altri script
+```
+
+### D. VISUALIZZATORE AGGIORNATO (visualizzatore_trapped_orders.ipynb)
+```
+MARKER OTTIMIZZATI:
+- Dimensioni diverse per validated vs non-validated (15 vs 8 pixel)
+- Colori per imbalance direction: rosso=SELL dominante, verde=BUY dominante
+- Posizioni diverse per finestre: high=5bars, close=10bars, low=20bars
+- Hover dettagliato con tutte le metriche + imbalance breakdown
+```
+
 STRUTTURA ATTUALE DEL PROGETTO
 ==============================
+```
 progetto ninjatrader/
 ├── data/
 │   ├── raw/
 │   │   ├── ES 06-25.Last.txt
 │   │   └── range_candles.csv
-│   └── results/
-│       └── trapped_orders_volX_deltaY.csv
-├── stat/
-│   └── result_stat_xx_yy.txt
+│   ├── processed/
+│   │   └── pulito_range_candles.csv
+│   ├── results/
+│   │   └── trapped_orders_*.csv
+│   └── grid_search/
+│       └── grid_search_results_*.csv
 ├── scripts/
+│   ├── pulizia_candle_data_raw.py
 │   ├── ricerca_parametri_trapped_orders.py
+│   ├── automazione_statistica.py
+│   ├── test_finestre_direzionali.py
 │   └── estrazione_stat_trapped_orders_pattern.py
-├── docs/
-│   └── patternOrderFlow.txt
-└── notebooks/
+├── notebooks/
+│   └── visualizzatore_trapped_orders.ipynb
+└── riassunti_workflow.txt
+```
 
-Ultimo aggiornamento: 27 maggio 2025
+**RISULTATI FINALI:**
+- ✅ Separazione netta filtri vs classificazioni
+- ✅ Grid search esteso a soglie realistiche (fino 60% volume, 90% aggression)
+- ✅ Metriche divergenti/non-divergenti separate per analisi comparativa
+- ✅ Correzione errori fondamentali struttura dati
+- ✅ Ottimizzazione sequence test basata su statistiche empiriche
+- ✅ Visualizzazione professionale con marker informativi
 
-appunti del 29/05/2025
-open_time,close_time,open,high,low,close,volume,delta_open,delta_high,delta_low,delta_close,direction,price_stats
-
-ho trovato gli errori che guastano tutti gli script. e sono nella funzione price stat. 
-ci deve essere stato un fraintendimento nella costruzuione del codice. cosa è il delta candela? 
-il delta candela è  (somma di tutti i volumi ask su tutti i livelli di una candela) meno
- (la somma di tutti i bid di tutti i livelli di una candela). 
- delta open hight low e close nella stringa sono valori inutili 
- basati sul prezzo(non è questo che si intende con delta), possono essere eliminati.
-  la colonna json price stat poi va riorganizzata perche anche questa riporta delle anomalie.
-  2025-05-11 22:00:00.120,2025-05-11 22:00:00.144,5763.0,5764.75,5761.0,5761.0,83,1898,1946,1898,1945,-1,"{np.float64(5763.0): {'volume': np.int64(14), 'delta': np.int64(8), 'bid_volume': np.int64(3), 'ask_volume': np.int64(11)}, np.float64(5763.25): {'volume': np.int64(11), 'delta': np.int64(11), 'bid_volume': 0, 'ask_volume': np.int64(11)}, np.float64(5763.5): {'volume': np.int64(8), 'delta': np.int64(8), 'bid_volume': 0, 'ask_volume': np.int64(8)}, np.float64(5763.75): {'volume': np.int64(2), 'delta': np.int64(2), 'bid_volume': 0, 'ask_volume': np.int64(2)}, np.float64(5764.0): {'volume': np.int64(7), 'delta': np.int64(7), 'bid_volume': 0, 'ask_volume': np.int64(7)}, np.float64(5764.5): {'volume': np.int64(1), 'delta': np.int64(1), 'bid_volume': 0, 'ask_volume': np.int64(1)}, np.float64(5764.75): {'volume': np.int64(3), 'delta': np.int64(3), 'bid_volume': 0, 'ask_volume': np.int64(3)}, np.float64(5762.75): {'volume': np.int64(6), 'delta': np.int64(2), 'bid_volume': np.int64(2), 'ask_volume': np.int64(4)}, np.float64(5762.5): {'volume': np.int64(5), 'delta': np.int64(3), 'bid_volume': np.int64(1), 'ask_volume': np.int64(4)}, np.float64(5762.25): {'volume': np.int64(3), 'delta': np.int64(-1), 'bid_volume': np.int64(2), 'ask_volume': np.int64(1)}, np.float64(5762.0): {'volume': np.int64(3), 'delta': np.int64(-1), 'bid_volume': np.int64(2), 'ask_volume': np.int64(1)}, np.float64(5761.75): {'volume': np.int64(7), 'delta': np.int64(3), 'bid_volume': np.int64(2), 'ask_volume': np.int64(5)}, np.float64(5761.5): {'volume': np.int64(2), 'delta': np.int64(0), 'bid_volume': np.int64(1), 'ask_volume': np.int64(1)}, np.float64(5761.25): {'volume': np.int64(10), 'delta': np.int64(2), 'bid_volume': np.int64(4), 'ask_volume': np.int64(6)}, np.float64(5761.0): {'volume': np.int64(1), 'delta': np.int64(-1), 'bid_volume': np.int64(1), 'ask_volume': 0}}" il delta qui calcolato è su ogni livello e sottrae il bid dall'ask,(questo fatto su ogni livello  orizzontale è un calcolo inutile), la riga price stat dovrebbe riportare semplicemente bid su un  livello di prezzo e ask sul solito livello di prezzo e volume totale sul livello di prezzo, ma non il delta. la funzione delta per delta candela ti ho spiegato che cosa è e come va calcolata. poi andrebbero aggregati in modo ordinato i livelli di prezzo dal piu piccolo al piu grande e ciascuno dovrebbe riportare il vol totale, il suo ask, totale il suo bid totale. il calcolo delle imbalance cosi negli altri script sarà il divario percentuale tra il tot ask di un livello con il tot bid del suo ilvello dib adiacente superiore. i ilvelli bid all'estramo superiore di una candela e ask inferiore quasi sempre se non sempre saranno 0 per ovvi motivi che se vuoi e mi chiederai ti spiego. domande?
-  se analizzi bene vedrai che ogni candela avra solo 8 livelli di prezzo.
-  perche? i livelli si ripetono perche sono la costruzione di un calcolo
- che avviene da un dataframe tik by tik. questi livelli che si ripetono vanno aggregati 
-  e messi in ordine dal piu piccolo al piu grande e vanno aggregati i valori per ogni livello. 
- troverari ad esempio in price stat prezzo x ripetuto piu volte e ciascuno con suo bid suo ask e volume.
- questo va aggregato e la risultante sarà x con tot bid tot ask tot volume.
- e i prezzi vanno elencati in ordine ascendente. la colonna volume del csv è volume totale 
-candela che sarà la somma dei volumi su tutti i livelli di prezzo,
-e la funzione per calcolare il delta candela te l'ho gia spiegata.
-ora io cosa farei per non creare ulteriore confusione e non rompere delle logiche su gli script
-che tutto sommato funzionano. i dati raw li lascerei stare e creerei uno script che 
-riorganizza prendendo da range candle csv crea il range candle csv corretto con questo
-output: open time, colse time, open, high,low,close,volume,delta candela
-(tot ask riportati nei livelli-tot bid riportati nei livelli),directio, price stat:
-livelle di prezzo 1 aggregato tot volume tot bid tot ask;
-livello di prezzo 2 aggregato tot volume tot bid tot ask....livello di prezzo 8 aggregato....
-ora io cosa farei per non creare ulteriore confusione e non rompere delle logiche su gli script
-che tutto sommato funzionano. i dati raw li lascerei stare e creerei uno script che riorganizza
-prendendo da range candle csv crea il range candle csv corretto con questo output: 
-open time, colse time, open, high,low,close,volume,delta candela
-(tot ask riportati nei livelli-tot bid riportati nei livelli),
-directio, price stat: livelle di prezzo 1 aggregato tot volume tot bid tot ask;
-livello di prezzo 2 aggregato tot volume tot bid tot ask....livello di prezzo 8 aggregato....
-e per questo dobbiamo creare uno script di pulizia chiamato pulizia_candle_data_raw.py 
-e restituisce il csv pulito_range_candles.csv che sarà la bare dati per tutti gli altri script.
-prime rettifiche ricerca_parametri_trapped_orders: il delta agli estremi
-(mi sono sbagliato usando un gergo tecnico non corretto) in realtà dovrebbe
-misurare eccessi di ask a gli estremo superiore o eccesso di bid all'estremo inferiore.
-che significa? se abbiamo ad esempio un up trende e il movimento si arresta bruscamente
-per un inversione che succederà su l'ultima candela? avremmo dei compratori intrappolati,
-operatori che si mettono in acquisto su i massimi ma vengono accumulati su un livell
-noi allora cercheremo anomalie sull'ask. dovremmo trovare un sistema per misurare 
-questa anomalia ad esempio confrontando gli ultimi livelli ask con i livelli bid sotto adiacenti
-per vedere se ci sono embalance, vedere se c'è un esaurimanto che significa su i livelli ask
-avere il penultimo o terzultimo livello con ask altissimo e livello ask successivo drasticamente 
-ridotto cioè magari <10% del livello considerato anomalo. il volume alto su gli ultimi livelli
-è un indicazione l'ask per livello estremo superiore e il bid per livello estremo inferiore
-sono la conferma che ci sono trapped orders.domande?
-
-8. CORREZIONE FONDAMENTALE LOGICA DATI (29/05/2025)
---------------------------------------------------
-**PROBLEMA IDENTIFICATO:** Errori strutturali nella costruzione dei dati che compromettevano tutti gli script:
-
-**Delta Candela (CORRETTO):**
-- VECCHIO: delta per livello (bid-ask su ogni livello) ❌
-- NUOVO: delta candela = (Σ ask_tutti_livelli) - (Σ bid_tutti_livelli) ✅
-
-**Price Stats (CORRETTO):**
-- VECCHIO: livelli duplicati con delta per livello ❌  
-- NUOVO: livelli aggregati ordinati (8 livelli) con volume_tot, bid_tot, ask_tot ✅
-
-**Colonne Obsolete Rimosse:**
-- delta_open, delta_high, delta_low, delta_close (basati su prezzo, non order flow)
-
-**Nuova Struttura Output:**
-open_time, close_time, open, high, low, close, volume, delta_candela, direction, price_stats
+Ultimo aggiornamento: 31 maggio 2025 - Branch refactoring completato e documentato
