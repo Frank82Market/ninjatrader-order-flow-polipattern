@@ -14,7 +14,7 @@ import sys
 
 # Import delle funzioni dal script principale
 sys.path.append('.')
-from ricerca_parametri_trapped_orders_rivisto import *
+from ricerca_parametri_trapped_orders import *  # ✅ CORRETTO: rimosso "_rivisto"
 
 # Parametri di default
 DEFAULT_DATA_PATH = 'data/processed/pulito_range_candles.csv'
